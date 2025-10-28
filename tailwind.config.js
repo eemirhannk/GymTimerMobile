@@ -9,7 +9,7 @@ export default {
         'success':'#22c55e',
       },
       fontFamily: {
-        imb: ['IBM Plex Sans', 'serif'],
+        sans: ['IBM Plex Sans', 'sans-serif'],
       },
     },
   },

@@ -1,5 +1,5 @@
 <template>
-    <div class="font-ibm bg-base-background">
+    <div class="font-sans bg-base-background min-h-screen">
         <slot />
     </div>
 </template>

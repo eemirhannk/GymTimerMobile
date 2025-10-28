@@ -2,9 +2,18 @@
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: false },
-  css: ['~/assets/css/main.css', '~/assets/css/tailwind.css'],
-  modules: ['@nuxt/fonts', '@nuxt/image', '@nuxtjs/tailwindcss'],
-  tailwindcss:{
-    cssPath: '~/assets/css/tailwind.css',
+  modules: ['@nuxt/image', '@nuxtjs/tailwindcss', '@nuxtjs/google-fonts'],
+  routeRules:{
+    '/**': { cache: { maxAge: 60 * 60 * 60}, ssr: true, swr: true },
+  },
+  googleFonts: {
+    families: {
+      'IBM Plex Sans': [400, 700],
+    },
+    display: 'swap',
+    download: true,
+    preload: true,
+    base64: true,
+    inject: true,
   }
 })
