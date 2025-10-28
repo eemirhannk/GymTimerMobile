@@ -47,7 +47,7 @@ export default defineNuxtConfig({
       ],
       link: [
         { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
-        { rel: 'canonical', href: 'https://yourdomain.com' }
+        { rel: 'canonical', href: 'https://gym-timer-tp.netlify.app' }
       ]
     }
   }
