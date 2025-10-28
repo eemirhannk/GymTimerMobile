@@ -1,23 +1,75 @@
 <script setup lang="ts">
 const route = useRoute()
+const totalSets = computed(() => {
+    const queryValue = Number(route.query.setCount);
+    if(isNaN(queryValue)) {
+        return 3
+    } 
+    else if(!Number.isInteger(queryValue)) {
+        return 3
+    }
+    else if(queryValue < 1) {
+        return 3
+    }
+    else {
+        return queryValue
+    }
+})
+const setDuration = computed(() => {
+    const queryValue = Number(route.query.setDuration);
+    if(isNaN(queryValue)) {
+        return 0
+    } 
+    else if(!Number.isInteger(queryValue)) {
+        return 0
+    }
+    else if(queryValue < 0) {
+        return 0
+    }
+    else {
+        return queryValue
+    }
+})
+const restDuration = computed(() => {
+    const queryValue = Number(route.query.restDuration);
+    if(isNaN(queryValue)) {
+        return 60
+    } 
+    else if(!Number.isInteger(queryValue)) {
+        return 60
+    }
+    else if(queryValue < 1) {
+        return 60
+    }
+    else {
+        return queryValue
+    }
+})
 
-// Query parametrelerinden değerleri al
-const totalSets = computed(() => Number(route.query.setCount) || 3)
-const setDuration = computed(() => Number(route.query.setDuration) || 0)
-const restDuration = computed(() => Number(route.query.restDuration) || 60)
-
-// Timer state
 const currentSet = ref(1)
-const isWorking = ref(true) // true: çalışma, false: dinlenme
+const isWorking = ref(true)
 const timeLeft = ref(0)
 const isRunning = ref(false)
 const isPaused = ref(false)
 let intervalId: ReturnType<typeof setInterval> | null = null
 
-// Timer interval'ını başlat (süreyi sıfırlamadan)
+
+const speak = (text: string) => {
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.cancel()
+    
+    const utterance = new SpeechSynthesisUtterance(text)
+    utterance.lang = 'tr-TR'
+    utterance.rate = 1.0 // Konuşma hızı
+    utterance.pitch = 1.0 // Ses tonu
+    utterance.volume = 1.0 // Ses seviyesi
+    
+    window.speechSynthesis.speak(utterance)
+  }
+}
+
 const startInterval = () => {
   if (setDuration.value === 0 && isWorking.value) {
-    // Süresiz çalışma modu
     return
   }
   
@@ -30,21 +82,21 @@ const startInterval = () => {
   }, 1000)
 }
 
-// Timer'ı başlat (ilk başlatma için)
 const startTimer = () => {
   isRunning.value = true
   isPaused.value = false
   
   if (isWorking.value) {
     timeLeft.value = setDuration.value
+    speak('Çalışma Zamanı')
   } else {
     timeLeft.value = restDuration.value
+    speak('Dinlenme Zamanı')
   }
   
   startInterval()
 }
 
-// Süre bittiğinde
 const handleTimeEnd = () => {
   if (intervalId) {
     clearInterval(intervalId)
@@ -52,26 +104,25 @@ const handleTimeEnd = () => {
   }
   
   if (isWorking.value) {
-    // Çalışma süresi bitti, dinlenmeye geç
-    isWorking.value = false
-    timeLeft.value = restDuration.value
-    startInterval()
-  } else {
-    // Dinlenme bitti
+
     if (currentSet.value < totalSets.value) {
-      // Sonraki set'e geç
-      currentSet.value++
-      isWorking.value = true
-      timeLeft.value = setDuration.value
+      isWorking.value = false
+      timeLeft.value = restDuration.value
+      speak('Dinlenme Zamanı')
       startInterval()
     } else {
-      // Tüm setler tamamlandı
       isRunning.value = false
+      speak('Tebrikler! Tüm setleri tamamladınız')
     }
+  } else {
+    currentSet.value++
+    isWorking.value = true
+    timeLeft.value = setDuration.value
+    speak(`Set ${currentSet.value}. Çalışma Zamanı`)
+    startInterval()
   }
 }
 
-// Manuel geçiş (süresiz çalışma için)
 const nextPhase = () => {
   if (intervalId) {
     clearInterval(intervalId)
@@ -79,33 +130,32 @@ const nextPhase = () => {
   }
   
   if (isWorking.value) {
-    // Dinlenmeye geç
-    isWorking.value = false
-    timeLeft.value = restDuration.value
-    startInterval()
-  } else {
-    // Sonraki set'e geç
     if (currentSet.value < totalSets.value) {
-      currentSet.value++
-      isWorking.value = true
-      timeLeft.value = setDuration.value
-      if (setDuration.value > 0) {
-        startInterval()
-      }
+      isWorking.value = false
+      timeLeft.value = restDuration.value
+      speak('Dinlenme Zamanı')
+      startInterval()
     } else {
       isRunning.value = false
+      speak('Tebrikler! Tüm setleri tamamladınız')
+    }
+  } else {
+    currentSet.value++
+    isWorking.value = true
+    timeLeft.value = setDuration.value
+    speak(`Set ${currentSet.value}. Çalışma Zamanı`)
+    if (setDuration.value > 0) {
+      startInterval()
     }
   }
 }
 
-// Pause/Resume
+
 const togglePause = () => {
   if (isPaused.value) {
-    // Devam et - süreyi sıfırlamadan sadece interval'ı başlat
     isPaused.value = false
     startInterval()
   } else {
-    // Duraklat
     isPaused.value = true
     if (intervalId) {
       clearInterval(intervalId)
@@ -114,7 +164,6 @@ const togglePause = () => {
   }
 }
 
-// Reset
 const resetTimer = () => {
   if (intervalId) {
     clearInterval(intervalId)
@@ -127,14 +176,14 @@ const resetTimer = () => {
   isPaused.value = false
 }
 
-// Zamanı formatla (mm:ss)
+
 const formattedTime = computed(() => {
   const minutes = Math.floor(timeLeft.value / 60)
   const seconds = timeLeft.value % 60
   return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
 })
 
-// Progress bar için yüzde
+
 const progressPercent = computed(() => {
   if (setDuration.value === 0 && isWorking.value) return 0
   
@@ -143,14 +192,12 @@ const progressPercent = computed(() => {
   return ((total - timeLeft.value) / total) * 100
 })
 
-// Component unmount olduğunda interval'ı temizle
 onUnmounted(() => {
   if (intervalId) {
     clearInterval(intervalId)
   }
 })
 
-// İlk yükleme
 onMounted(() => {
   if (setDuration.value > 0) {
     timeLeft.value = setDuration.value
@@ -162,7 +209,6 @@ onMounted(() => {
   <div class="min-h-screen w-full flex items-center justify-center p-4 sm:p-6">
     <div class="w-full max-w-2xl">
       
-      <!-- Header -->
       <div class="mb-6 sm:mb-8 flex items-center justify-between">
         <NuxtLink 
           to="/" 
@@ -177,10 +223,8 @@ onMounted(() => {
         <div class="w-16"></div>
       </div>
 
-      <!-- Timer Card -->
       <div class="bg-white rounded-2xl shadow-2xl border border-gray-200 p-6 sm:p-10 overflow-hidden">
         
-        <!-- Set Info -->
         <div class="text-center mb-8">
           <div class="text-sm font-medium text-gray-500 mb-1">
             Set
@@ -190,7 +234,6 @@ onMounted(() => {
           </div>
         </div>
 
-        <!-- Status Badge -->
         <div class="flex justify-center mb-6">
           <div 
             :class="[
@@ -204,12 +247,9 @@ onMounted(() => {
           </div>
         </div>
 
-        <!-- Timer Display -->
         <div class="relative mb-8">
-          <!-- Progress Circle Background -->
           <div class="flex justify-center items-center">
             <div class="relative">
-              <!-- Background Circle -->
               <svg class="transform -rotate-90 w-64 h-64 sm:w-80 sm:h-80">
                 <circle
                   cx="50%"
@@ -219,7 +259,6 @@ onMounted(() => {
                   stroke-width="12"
                   fill="none"
                 />
-                <!-- Progress Circle -->
                 <circle
                   cx="50%"
                   cy="50%"
@@ -234,7 +273,6 @@ onMounted(() => {
                 />
               </svg>
               
-              <!-- Time Display -->
               <div class="absolute inset-0 flex flex-col items-center justify-center">
                 <div 
                   v-if="!isRunning"
@@ -257,16 +295,12 @@ onMounted(() => {
           </div>
         </div>
 
-        <!-- Workout Completed -->
         <div v-if="!isRunning && currentSet > totalSets" class="text-center mb-8">
           <div class="text-3xl mb-4">🎉</div>
           <h2 class="text-2xl font-bold text-gray-800 mb-2">Tebrikler!</h2>
           <p class="text-gray-600">Tüm setleri tamamladınız!</p>
         </div>
-
-        <!-- Control Buttons -->
         <div class="flex flex-col sm:flex-row gap-3 justify-center">
-          <!-- Start Button -->
           <button
             v-if="!isRunning"
             @click="startTimer"
@@ -275,7 +309,6 @@ onMounted(() => {
             {{ currentSet > totalSets ? 'Yeniden Başla' : 'Başla' }}
           </button>
 
-          <!-- Pause/Resume Button -->
           <button
             v-if="isRunning && !(setDuration === 0 && isWorking)"
             @click="togglePause"
@@ -289,7 +322,6 @@ onMounted(() => {
             {{ isPaused ? 'Devam Et' : 'Duraklat' }}
           </button>
 
-          <!-- Next Phase Button (for unlimited work time) -->
           <button
             v-if="isRunning && setDuration === 0 && isWorking"
             @click="nextPhase"
@@ -298,7 +330,6 @@ onMounted(() => {
             Dinlenmeye Geç
           </button>
 
-          <!-- Reset Button -->
           <button
             v-if="isRunning"
             @click="resetTimer"
@@ -308,7 +339,6 @@ onMounted(() => {
           </button>
         </div>
 
-        <!-- Settings Info -->
         <div class="mt-8 pt-6 border-t border-gray-200">
           <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 text-center">
             <div>
