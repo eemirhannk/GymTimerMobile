@@ -51,6 +51,8 @@ const isWorking = ref(true)
 const timeLeft = ref(0)
 const isRunning = ref(false)
 const isPaused = ref(false)
+const isEnd = ref(false)
+
 let intervalId: ReturnType<typeof setInterval> | null = null
 
 
@@ -113,6 +115,7 @@ const handleTimeEnd = () => {
     } else {
       isRunning.value = false
       speak('Tebrikler! Tüm setleri tamamladınız')
+      isEnd.value = true
     }
   } else {
     currentSet.value++
@@ -138,6 +141,7 @@ const nextPhase = () => {
     } else {
       isRunning.value = false
       speak('Tebrikler! Tüm setleri tamamladınız')
+      isEnd.value = true
     }
   } else {
     currentSet.value++
@@ -174,6 +178,7 @@ const resetTimer = () => {
   timeLeft.value = 0
   isRunning.value = false
   isPaused.value = false
+  isEnd.value = false
 }
 
 
@@ -302,7 +307,7 @@ onMounted(() => {
         </div>
         <div class="flex flex-col sm:flex-row gap-3 justify-center">
           <button
-            v-if="!isRunning"
+            v-if="!isRunning && !isEnd"
             @click="startTimer"
             class="px-8 py-4 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl transition-all transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
           >
@@ -310,7 +315,7 @@ onMounted(() => {
           </button>
 
           <button
-            v-if="isRunning && !(setDuration === 0 && isWorking)"
+            v-if="isRunning && !(setDuration === 0 && isWorking) && !isEnd"
             @click="togglePause"
             :class="[
               'px-8 py-4 font-semibold rounded-xl transition-all transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2',
@@ -323,7 +328,7 @@ onMounted(() => {
           </button>
 
           <button
-            v-if="isRunning && setDuration === 0 && isWorking"
+            v-if="isRunning && setDuration === 0 && isWorking && !isEnd"
             @click="nextPhase"
             class="px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-all transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
           >
@@ -331,7 +336,7 @@ onMounted(() => {
           </button>
 
           <button
-            v-if="isRunning"
+            v-if="isRunning || isEnd"
             @click="resetTimer"
             class="px-8 py-4 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl transition-all transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
           >
