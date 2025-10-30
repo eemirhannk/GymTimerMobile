@@ -24,3 +24,24 @@ logs
 !.env.example
 
 .github
+
+# React Native / Expo
+GymTimerMobile/node_modules/
+GymTimerMobile/.expo/
+GymTimerMobile/.expo-shared/
+GymTimerMobile/dist/
+GymTimerMobile/ios/Pods/
+GymTimerMobile/ios/.xcode.env.local
+GymTimerMobile/android/.gradle/
+GymTimerMobile/android/app/build/
+GymTimerMobile/android/build/
+GymTimerMobile/.DS_Store
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+web-build/
+.expo/
+.expo-shared/
