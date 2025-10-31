@@ -1,13 +1,27 @@
 {
   "expo": {
-    "name": "Gym Timer",
+    "name": "Gym Timer - Antrenman Zamanlayıcı",
     "slug": "gym-timer-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
-    "description": "Spor salonunda kullanabileceğiniz profesyonel zamanlayıcı uygulaması",
+    "description": "🏋️ Spor salonunda kullanabileceğiniz profesyonel antrenman zamanlayıcı uygulaması. Setler, çalışma ve dinlenme sürelerini kolayca yönetin. Türkçe ve İngilizce dil desteği ile kullanıcı dostu arayüz.",
+    "keywords": [
+      "gym timer",
+      "antrenman zamanlayıcı",
+      "spor salonu",
+      "workout timer",
+      "egzersiz zamanlayıcı",
+      "set timer",
+      "rest timer",
+      "fitness timer",
+      "interval timer",
+      "gym app",
+      "antrenman uygulaması",
+      "spor uygulaması"
+    ],
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -15,7 +29,12 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.gymtimer.mobile"
+      "bundleIdentifier": "com.gymtimer.mobile",
+      "category": "Health & Fitness",
+      "infoPlist": {
+        "NSHealthShareUsageDescription": "Bu uygulama sağlık verilerinize erişmez.",
+        "NSHealthUpdateUsageDescription": "Bu uygulama sağlık verilerinizi güncellemez."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -24,7 +43,10 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.gymtimer.mobile"
+      "package": "com.gymtimer.mobile",
+      "permissions": [],
+      "versionCode": 1,
+      "playStoreUrl": "https://play.google.com/store/apps/details?id=com.gymtimer.mobile"
     },
     "web": {
       "favicon": "./assets/favicon.png"
