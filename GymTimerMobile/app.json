@@ -7,7 +7,9 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "owner": "your-expo-username",
     "description": "🏋️ Spor salonunda kullanabileceğiniz profesyonel antrenman zamanlayıcı uygulaması. Setler, çalışma ve dinlenme sürelerini kolayca yönetin. Türkçe ve İngilizce dil desteği ile kullanıcı dostu arayüz.",
+    "privacy": "public",
     "keywords": [
       "gym timer",
       "antrenman zamanlayıcı",
@@ -30,11 +32,15 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.gymtimer.mobile",
+      "buildNumber": "1",
       "category": "Health & Fitness",
       "infoPlist": {
         "NSHealthShareUsageDescription": "Bu uygulama sağlık verilerinize erişmez.",
         "NSHealthUpdateUsageDescription": "Bu uygulama sağlık verilerinizi güncellemez.",
         "UIUserInterfaceStyle": "Automatic"
+      },
+      "config": {
+        "usesNonExemptEncryption": false
       }
     },
     "android": {
@@ -51,6 +57,11 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "your-project-id-here"
+      }
     }
   }
 }

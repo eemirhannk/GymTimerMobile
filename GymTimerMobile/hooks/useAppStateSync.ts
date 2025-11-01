@@ -20,6 +20,13 @@ type UseAppStateSyncParams = {
   clearInterval: () => void;
 };
 
+type BackgroundSnapshot = {
+  timestamp: number;
+  timeLeft: number;
+  isWorking: boolean;
+  currentSet: number;
+};
+
 export const useAppStateSync = ({
   isRunning,
   isPaused,
@@ -38,62 +45,81 @@ export const useAppStateSync = ({
   startInterval,
   clearInterval,
 }: UseAppStateSyncParams) => {
-  const lastTimestampRef = useRef<number | null>(null);
-  const wasRunningRef = useRef(false);
+  const backgroundSnapshotRef = useRef<BackgroundSnapshot | null>(null);
 
   useEffect(() => {
     const sub = AppState.addEventListener('change', (state) => {
       if (state === 'inactive' || state === 'background') {
-        lastTimestampRef.current = Date.now();
-        wasRunningRef.current = isRunning && !isPaused && !isEnd;
+        // Arka plana alındığında snapshot al
+        if (isRunning && !isPaused && !isEnd) {
+          backgroundSnapshotRef.current = {
+            timestamp: Date.now(),
+            timeLeft: timeLeftRef.current,
+            isWorking: isWorkingRef.current,
+            currentSet: currentSetRef.current,
+          };
+        } else {
+          backgroundSnapshotRef.current = null;
+        }
         return;
       }
       if (state === 'active') {
-        if (!wasRunningRef.current || lastTimestampRef.current == null) return;
+        // Snapshot yoksa veya timer çalışmıyorsa bir şey yapma
+        if (!backgroundSnapshotRef.current) return;
+
+        const snapshot = backgroundSnapshotRef.current;
+        backgroundSnapshotRef.current = null;
 
         // Interval varsa durdur, hesap sonrası tekrar başlatacağız
         clearInterval();
 
         const now = Date.now();
-        let delta = Math.floor((now - lastTimestampRef.current) / 1000);
-        lastTimestampRef.current = null;
+        let delta = Math.floor((now - snapshot.timestamp) / 1000);
+        
+        // Snapshot'tan başlayarak hesaplama yap
+        let currentTimeLeft = snapshot.timeLeft;
+        let currentIsWorking = snapshot.isWorking;
+        let currentSet = snapshot.currentSet;
 
         // Geçen süreyi uygula: fazlar arası geçişleri de hesaba kat
         while (delta > 0 && !isEnd) {
-          const totalCurrent = isWorkingRef.current ? (setDuration || 0) : restDuration;
+          const totalCurrent = currentIsWorking ? (setDuration || 0) : restDuration;
+          
           // Süresiz çalışma ise sadece dinlenmede telafi uygularız
-          if (isWorkingRef.current && setDuration === 0) {
+          if (currentIsWorking && setDuration === 0) {
             break;
           }
-          const need = timeLeftRef.current;
+          
+          const need = currentTimeLeft;
+          
           if (delta < need) {
-            timeLeftRef.current = need - delta;
-            setTimeLeft(timeLeftRef.current);
+            // Bu faz içinde kalıyoruz
+            currentTimeLeft = need - delta;
             delta = 0;
           } else {
             // Bu faz bitiyor
             delta -= need;
-            timeLeftRef.current = 0;
-            setTimeLeft(0);
+            currentTimeLeft = 0;
+            
             // Faz sonu mantığını manuel ilerlet
-            if (isWorkingRef.current) {
-              if (currentSetRef.current < setCount) {
-                isWorkingRef.current = false;
-                setIsWorking(false);
-                timeLeftRef.current = restDuration;
-                setTimeLeft(restDuration);
+            if (currentIsWorking) {
+              // Work fazı bitiyor
+              if (currentSet < setCount) {
+                // Dinlenme fazına geç
+                currentIsWorking = false;
+                currentTimeLeft = restDuration;
               } else {
+                // Son set bitti, antrenman tamamlandı
                 setIsRunning(false);
                 setIsEnd(true);
                 break;
               }
             } else {
-              currentSetRef.current += 1;
-              setCurrentSet(currentSetRef.current);
-              isWorkingRef.current = true;
-              setIsWorking(true);
-              timeLeftRef.current = setDuration;
-              setTimeLeft(setDuration);
+              // Rest fazı bitiyor, bir sonraki sete geç
+              currentSet += 1;
+              currentIsWorking = true;
+              currentTimeLeft = setDuration;
+              
               if (setDuration === 0) {
                 // Süresiz çalışma fazına gelindiyse daha fazla otomatik akış yok
                 break;
@@ -102,8 +128,16 @@ export const useAppStateSync = ({
           }
         }
 
+        // State'i güncelle
+        timeLeftRef.current = currentTimeLeft;
+        setTimeLeft(currentTimeLeft);
+        isWorkingRef.current = currentIsWorking;
+        setIsWorking(currentIsWorking);
+        currentSetRef.current = currentSet;
+        setCurrentSet(currentSet);
+
         // Bitti değilse interval'i yeniden başlat
-        if (!isEnd && isRunning && !(isWorkingRef.current && setDuration === 0)) {
+        if (!isEnd && isRunning && !(currentIsWorking && setDuration === 0)) {
           startInterval();
         }
       }
@@ -112,6 +146,6 @@ export const useAppStateSync = ({
     return () => {
       sub.remove();
     };
-  }, [isPaused, isEnd, restDuration, setDuration, setCount, isRunning]);
+  }, [isPaused, isEnd, restDuration, setDuration, setCount, isRunning, timeLeftRef, isWorkingRef, currentSetRef, setTimeLeft, setIsWorking, setCurrentSet, setIsRunning, setIsEnd, startInterval, clearInterval]);
 };
 
