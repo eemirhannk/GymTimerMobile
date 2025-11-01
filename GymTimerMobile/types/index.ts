@@ -1,7 +1,10 @@
+export type SoundMode = 'effects' | 'speech';
+
 export type TimerScreenProps = {
   setCount: number;
   setDuration: number;
   restDuration: number;
+  soundMode: SoundMode;
   onBack: () => void;
 };
 

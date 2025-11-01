@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { useTheme } from '../theme/ThemeContext';
 
 type TimerHeaderProps = {
   onBack: () => void;
@@ -14,16 +15,17 @@ function TimerHeader({
   onToggleMute,
 }: TimerHeaderProps) {
   const { t } = useTranslation();
+  const { colors } = useTheme();
 
   return (
     <View style={styles.container}>
       <TouchableOpacity onPress={onBack}>
-        <Text style={styles.backText}>←</Text>
+        <Text style={[styles.backText, { color: colors.text }]}>←</Text>
       </TouchableOpacity>
-      <Text style={styles.title}>{t('title')}</Text>
+      <Text style={[styles.title, { color: colors.text }]}>{t('title')}</Text>
       <View style={styles.muteContainer}>
         <TouchableOpacity onPress={onToggleMute}>
-          <Text style={styles.backText}>{isMuted ? '🔇' : '🔊'}</Text>
+          <Text style={[styles.backText, { color: colors.text }]}>{isMuted ? '🔇' : '🔊'}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -41,12 +43,10 @@ const styles = StyleSheet.create({
   backText: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#1F2937',
   },
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#1F2937',
     textAlign: 'center',
     fontStyle: 'italic',
   },

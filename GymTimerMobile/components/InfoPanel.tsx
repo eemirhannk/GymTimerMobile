@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { useTheme } from '../theme/ThemeContext';
 
 type InfoPanelProps = {
   setCount: number;
@@ -14,22 +15,23 @@ function InfoPanel({
   restDuration,
 }: InfoPanelProps) {
   const { t } = useTranslation();
+  const { colors } = useTheme();
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { borderTopColor: colors.border }]}>
       <View style={styles.item}>
-        <Text style={styles.label}>{t('totalSets')}</Text>
-        <Text style={styles.value}>{setCount}</Text>
+        <Text style={[styles.label, { color: colors.textSecondary }]}>{t('totalSets')}</Text>
+        <Text style={[styles.value, { color: colors.text }]}>{setCount}</Text>
       </View>
       <View style={styles.item}>
-        <Text style={styles.label}>{t('workLabel')}</Text>
-        <Text style={styles.value}>
+        <Text style={[styles.label, { color: colors.textSecondary }]}>{t('workLabel')}</Text>
+        <Text style={[styles.value, { color: colors.text }]}>
           {setDuration === 0 ? t('timeless') : `${setDuration}s`}
         </Text>
       </View>
       <View style={styles.item}>
-        <Text style={styles.label}>{t('restLabel')}</Text>
-        <Text style={styles.value}>{restDuration}s</Text>
+        <Text style={[styles.label, { color: colors.textSecondary }]}>{t('restLabel')}</Text>
+        <Text style={[styles.value, { color: colors.text }]}>{restDuration}s</Text>
       </View>
     </View>
   );
@@ -39,7 +41,6 @@ const styles = StyleSheet.create({
   container: {
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
     flexDirection: 'row',
     justifyContent: 'space-around',
   },
@@ -48,12 +49,10 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 12,
-    color: '#6B7280',
   },
   value: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1F2937',
   },
 });
 

@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "description": "🏋️ Spor salonunda kullanabileceğiniz profesyonel antrenman zamanlayıcı uygulaması. Setler, çalışma ve dinlenme sürelerini kolayca yönetin. Türkçe ve İngilizce dil desteği ile kullanıcı dostu arayüz.",
     "keywords": [
@@ -33,7 +33,8 @@
       "category": "Health & Fitness",
       "infoPlist": {
         "NSHealthShareUsageDescription": "Bu uygulama sağlık verilerinize erişmez.",
-        "NSHealthUpdateUsageDescription": "Bu uygulama sağlık verilerinizi güncellemez."
+        "NSHealthUpdateUsageDescription": "Bu uygulama sağlık verilerinizi güncellemez.",
+        "UIUserInterfaceStyle": "Automatic"
       }
     },
     "android": {

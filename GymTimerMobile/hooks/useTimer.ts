@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { AppState } from 'react-native';
+import { TIMER } from '../utils/constants';
+import { useAppStateSync } from './useAppStateSync';
 
 type UseTimerParams = {
   setCount: number;
@@ -44,28 +45,16 @@ export const useTimer = ({
   const isWorkingRef = useRef(true);
   const currentSetRef = useRef(1);
   const isRunningRef = useRef(false);
-  const lastTimestampRef = useRef<number | null>(null);
-  const wasRunningRef = useRef(false);
 
-  const startInterval = () => {
-    if (setDuration === 0 && isWorkingRef.current) {
-      return;
-    }
-    intervalRef.current = setInterval(() => {
-      if (timeLeftRef.current > 0) {
-        timeLeftRef.current--;
-        setTimeLeft(timeLeftRef.current);
-      } else {
-        handleTimeEnd();
-      }
-    }, 1000);
-  };
-
-  const handleTimeEnd = () => {
+  const clearIntervalFn = useCallback(() => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
+  }, []);
+
+  const handleTimeEnd = useCallback(() => {
+    clearIntervalFn();
 
     if (isWorkingRef.current) {
       if (currentSetRef.current < setCount) {
@@ -74,12 +63,13 @@ export const useTimer = ({
         timeLeftRef.current = restDuration;
         setTimeLeft(restDuration);
         onPhaseChange?.('rest', currentSetRef.current);
-        startInterval();
+        // startInterval'ı aşağıda tanımlayacağız, bu yüzden burada referansını saklayacağız
       } else {
         setIsRunning(false);
         isRunningRef.current = false;
         setIsEnd(true);
         onComplete?.();
+        return;
       }
     } else {
       currentSetRef.current++;
@@ -89,11 +79,39 @@ export const useTimer = ({
       timeLeftRef.current = setDuration;
       setTimeLeft(setDuration);
       onPhaseChange?.('work', currentSetRef.current);
-      startInterval();
     }
-  };
 
-  const startTimer = () => {
+    // Interval'ı yeniden başlat (eğer gerekirse)
+    if (setDuration === 0 && isWorkingRef.current) {
+      return;
+    }
+    clearIntervalFn();
+    intervalRef.current = setInterval(() => {
+      if (timeLeftRef.current > 0) {
+        timeLeftRef.current--;
+        setTimeLeft(timeLeftRef.current);
+      } else {
+        handleTimeEnd();
+      }
+    }, TIMER.INTERVAL_MS);
+  }, [setCount, restDuration, setDuration, setTimeLeft, setIsWorking, setCurrentSet, setIsRunning, setIsEnd, onPhaseChange, onComplete, clearIntervalFn]);
+
+  const startInterval = useCallback(() => {
+    if (setDuration === 0 && isWorkingRef.current) {
+      return;
+    }
+    clearIntervalFn();
+    intervalRef.current = setInterval(() => {
+      if (timeLeftRef.current > 0) {
+        timeLeftRef.current--;
+        setTimeLeft(timeLeftRef.current);
+      } else {
+        handleTimeEnd();
+      }
+    }, TIMER.INTERVAL_MS);
+  }, [setDuration, setTimeLeft, handleTimeEnd, clearIntervalFn]);
+
+  const startTimer = useCallback(() => {
     setIsRunning(true);
     isRunningRef.current = true;
     setIsPaused(false);
@@ -109,13 +127,10 @@ export const useTimer = ({
     }
 
     startInterval();
-  };
+  }, [setDuration, restDuration, onPhaseChange, startInterval, setTimeLeft]);
 
-  const nextPhase = () => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
+  const nextPhase = useCallback(() => {
+    clearIntervalFn();
 
     if (isWorking) {
       if (currentSet < setCount) {
@@ -144,27 +159,20 @@ export const useTimer = ({
         startInterval();
       }
     }
-  };
+  }, [isWorking, currentSet, setCount, setDuration, restDuration, setTimeLeft, setIsWorking, setCurrentSet, setIsRunning, setIsEnd, onPhaseChange, onComplete, clearIntervalFn, startInterval]);
 
-  const togglePause = () => {
+  const togglePause = useCallback(() => {
     if (isPaused) {
       setIsPaused(false);
       startInterval();
     } else {
       setIsPaused(true);
-      wasRunningRef.current = false;
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
+      clearIntervalFn();
     }
-  };
+  }, [isPaused, startInterval, clearIntervalFn]);
 
-  const resetTimer = () => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
+  const resetTimer = useCallback(() => {
+    clearIntervalFn();
     currentSetRef.current = 1;
     setCurrentSet(1);
     isWorkingRef.current = true;
@@ -175,7 +183,7 @@ export const useTimer = ({
     isRunningRef.current = false;
     setIsPaused(false);
     setIsEnd(false);
-  };
+  }, [setCurrentSet, setIsWorking, setTimeLeft, setIsRunning, setIsPaused, setIsEnd, clearIntervalFn]);
 
   // setDuration değiştiğinde timeLeft'i güncelle
   useEffect(() => {
@@ -183,94 +191,34 @@ export const useTimer = ({
       timeLeftRef.current = setDuration;
       setTimeLeft(setDuration);
     }
-  }, [setDuration]);
+  }, [setDuration, setTimeLeft]);
 
   // Cleanup interval on unmount
   useEffect(() => {
     return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
+      clearIntervalFn();
     };
-  }, []);
+  }, [clearIntervalFn]);
 
   // AppState ile arka plana gidip gelince geçen zamanı telafi et
-  useEffect(() => {
-    const sub = AppState.addEventListener('change', (state) => {
-      if (state === 'inactive' || state === 'background') {
-        lastTimestampRef.current = Date.now();
-        wasRunningRef.current = isRunningRef.current && !isPaused && !isEnd;
-        return;
-      }
-      if (state === 'active') {
-        if (!wasRunningRef.current || lastTimestampRef.current == null) return;
-
-        // Interval varsa durdur, hesap sonrası tekrar başlatacağız
-        if (intervalRef.current) {
-          clearInterval(intervalRef.current);
-          intervalRef.current = null;
-        }
-
-        const now = Date.now();
-        let delta = Math.floor((now - lastTimestampRef.current) / 1000);
-        lastTimestampRef.current = null;
-
-        // Geçen süreyi uygula: fazlar arası geçişleri de hesaba kat
-        while (delta > 0 && !isEnd) {
-          const totalCurrent = isWorkingRef.current ? (setDuration || 0) : restDuration;
-          // Süresiz çalışma ise sadece dinlenmede telafi uygularız
-          if (isWorkingRef.current && setDuration === 0) {
-            break;
-          }
-          const need = timeLeftRef.current;
-          if (delta < need) {
-            timeLeftRef.current = need - delta;
-            setTimeLeft(timeLeftRef.current);
-            delta = 0;
-          } else {
-            // Bu faz bitiyor
-            delta -= need;
-            timeLeftRef.current = 0;
-            setTimeLeft(0);
-            // Faz sonu mantığını manuel ilerlet
-            if (isWorkingRef.current) {
-              if (currentSetRef.current < setCount) {
-                isWorkingRef.current = false;
-                setIsWorking(false);
-                timeLeftRef.current = restDuration;
-                setTimeLeft(restDuration);
-              } else {
-                setIsRunning(false);
-                isRunningRef.current = false;
-                setIsEnd(true);
-                break;
-              }
-            } else {
-              currentSetRef.current += 1;
-              setCurrentSet(currentSetRef.current);
-              isWorkingRef.current = true;
-              setIsWorking(true);
-              timeLeftRef.current = setDuration;
-              setTimeLeft(setDuration);
-              if (setDuration === 0) {
-                // Süresiz çalışma fazına gelindiyse daha fazla otomatik akış yok
-                break;
-              }
-            }
-          }
-        }
-
-        // Bitti değilse interval'i yeniden başlat
-        if (!isEnd && isRunningRef.current && !(isWorkingRef.current && setDuration === 0)) {
-          startInterval();
-        }
-      }
-    });
-
-    return () => {
-      sub.remove();
-    };
-  }, [isPaused, isEnd, restDuration, setDuration, setCount]);
+  useAppStateSync({
+    isRunning: isRunningRef.current,
+    isPaused,
+    isEnd,
+    timeLeftRef,
+    isWorkingRef,
+    currentSetRef,
+    setCount,
+    setDuration,
+    restDuration,
+    setTimeLeft,
+    setIsWorking,
+    setCurrentSet,
+    setIsRunning,
+    setIsEnd,
+    startInterval,
+    clearInterval: clearIntervalFn,
+  });
 
   return {
     currentSet,

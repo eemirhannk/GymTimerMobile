@@ -1,17 +1,21 @@
 import React, { useMemo } from 'react';
 import { TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { BUTTON_COLORS, BORDER_RADIUS, SPACING, TYPOGRAPHY } from '../utils/constants';
+import { useTheme } from '../theme/ThemeContext';
 
 type TimerButtonProps = {
-  type: 'start' | 'pause' | 'resume' | 'next' | 'reset';
+  type: 'start' | 'pause' | 'resume' | 'next' | 'reset' | 'finishSet' | 'finishRest';
   onPress: () => void;
   showRestart?: boolean;
+  fullWidth?: boolean;
 };
 
 function TimerButton({
   type,
   onPress,
   showRestart = false,
+  fullWidth = false,
 }: TimerButtonProps) {
   const { t } = useTranslation();
 
@@ -27,10 +31,18 @@ function TimerButton({
         return t('nextRest');
       case 'reset':
         return t('reset');
+      case 'finishSet':
+        return t('finishSet');
+      case 'finishRest':
+        return t('finishRest');
     }
   }, [type, showRestart, t]);
 
-  const buttonStyle = useMemo(() => [styles.button, styles[`${type}Button`]], [type]);
+  const buttonStyle = useMemo(() => [
+    styles.button,
+    styles[`${type}Button`],
+    fullWidth && styles.fullWidthButton
+  ], [type, fullWidth]);
 
   return (
     <TouchableOpacity style={buttonStyle} onPress={onPress}>
@@ -43,37 +55,48 @@ export default React.memo(TimerButton);
 
 const styles = StyleSheet.create({
   button: {
-    borderRadius: 12,
-    paddingVertical: 16,
+    borderRadius: BORDER_RADIUS.MD,
+    paddingVertical: SPACING.LG,
     paddingHorizontal: 32,
     alignItems: 'center',
     justifyContent: 'center',
   },
   startButton: {
-    backgroundColor: '#059669',
+    backgroundColor: BUTTON_COLORS.START,
     width: '100%',
   },
   pauseButton: {
-    backgroundColor: '#D97706',
+    backgroundColor: BUTTON_COLORS.PAUSE,
     width: '50%',
   },
   resumeButton: {
-    backgroundColor: '#059669',
+    backgroundColor: BUTTON_COLORS.RESUME,
     width: '50%',
   },
   nextButton: {
-    backgroundColor: '#7C3AED',
+    backgroundColor: BUTTON_COLORS.NEXT,
     width: '50%',
   },
   resetButton: {
-    backgroundColor: '#DC2626',
+    backgroundColor: BUTTON_COLORS.RESET,
     width: '50%',
+  },
+  finishSetButton: {
+    backgroundColor: BUTTON_COLORS.FINISH_SET,
+    width: '100%',
+  },
+  finishRestButton: {
+    backgroundColor: BUTTON_COLORS.FINISH_REST,
+    width: '100%',
   },
   buttonText: {
     color: 'white',
-    fontSize: 16,
+    fontSize: TYPOGRAPHY.BODY,
     fontWeight: '600',
     textAlign: 'center',
+  },
+  fullWidthButton: {
+    width: '100%',
   },
 });
 

@@ -20,7 +20,7 @@ A React Native mobile application for gym workout timers with work and rest phas
 - **i18next** for internationalization
 - **expo-speech** for text-to-speech
 - **react-native-svg** for circular progress indicator
-- **expo-av** for audio management
+- **expo-audio** for audio management
 
 ## Prerequisites
 

@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { useTheme } from '../theme/ThemeContext';
 
 type SetInfoProps = {
   currentSet: number;
@@ -7,10 +8,12 @@ type SetInfoProps = {
 };
 
 function SetInfo({ currentSet, totalSets }: SetInfoProps) {
+  const { colors } = useTheme();
+  
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>Set</Text>
-      <Text style={styles.number}>
+      <Text style={[styles.label, { color: colors.textSecondary }]}>Set</Text>
+      <Text style={[styles.number, { color: colors.text }]}>
         {currentSet} / {totalSets}
       </Text>
     </View>
@@ -24,12 +27,10 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#6B7280',
   },
   number: {
     fontSize: 48,
     fontWeight: 'bold',
-    color: '#1F2937',
   },
 });
 

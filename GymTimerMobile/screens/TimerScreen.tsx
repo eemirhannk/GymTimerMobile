@@ -1,10 +1,13 @@
 import React, { useMemo, useCallback } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
 import { calculateProgress } from '../utils/timeFormatter';
 import { TimerScreenProps } from '../types';
 import { useTimer } from '../hooks/useTimer';
 import { useSpeech } from '../hooks/useSpeech';
+import { useHaptics } from '../hooks/useHaptics';
+import { useTheme } from '../theme/ThemeContext';
 import TimerHeader from '../components/TimerHeader';
 import SetInfo from '../components/SetInfo';
 import PhaseBadge from '../components/PhaseBadge';
@@ -12,20 +15,24 @@ import TimerCircle from '../components/TimerCircle';
 import TimerButton from '../components/TimerButton';
 import InfoPanel from '../components/InfoPanel';
 
-export default function TimerScreen({ setCount, setDuration, restDuration, onBack }: TimerScreenProps) {
-  const { speakKey, isMuted, toggleMute } = useSpeech();
+export default function TimerScreen({ setCount, setDuration, restDuration, soundMode, onBack }: TimerScreenProps) {
+  const { colors } = useTheme();
+  const { speakKey, isMuted, toggleMute } = useSpeech(soundMode);
+  const { triggerImpact, triggerNotification, triggerSelection } = useHaptics();
 
   const handlePhaseChange = useCallback((phase: 'work' | 'rest', setNumber: number) => {
+    triggerImpact(Haptics.ImpactFeedbackStyle.Heavy);
     if (phase === 'work') {
       speakKey('setWork', setNumber);
     } else {
       speakKey('rest');
     }
-  }, [speakKey]);
+  }, [speakKey, triggerImpact]);
 
   const handleComplete = useCallback(() => {
+    triggerNotification('success');
     speakKey('congrats');
-  }, [speakKey]);
+  }, [speakKey, triggerNotification]);
 
   const {
     currentSet,
@@ -46,6 +53,26 @@ export default function TimerScreen({ setCount, setDuration, restDuration, onBac
     onComplete: handleComplete,
   });
 
+  const handleStartTimer = useCallback(() => {
+    triggerImpact(Haptics.ImpactFeedbackStyle.Medium);
+    startTimer();
+  }, [startTimer, triggerImpact]);
+
+  const handleTogglePause = useCallback(() => {
+    triggerSelection();
+    togglePause();
+  }, [togglePause, triggerSelection]);
+
+  const handleResetTimer = useCallback(() => {
+    triggerSelection();
+    resetTimer();
+  }, [resetTimer, triggerSelection]);
+
+  const handleNextPhase = useCallback(() => {
+    triggerImpact(Haptics.ImpactFeedbackStyle.Medium);
+    nextPhase();
+  }, [nextPhase, triggerImpact]);
+
   const progressPercent = useMemo(() => {
     const total = isWorking ? setDuration : restDuration;
     return calculateProgress(timeLeft, total, isWorking, setDuration);
@@ -54,7 +81,7 @@ export default function TimerScreen({ setCount, setDuration, restDuration, onBac
   const showRestart = useMemo(() => currentSet > setCount, [currentSet, setCount]);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView contentContainerStyle={styles.timerScrollContent}>
         <TimerHeader
           onBack={onBack}
@@ -62,7 +89,7 @@ export default function TimerScreen({ setCount, setDuration, restDuration, onBac
           onToggleMute={toggleMute}
         />
 
-        <View style={styles.card}>
+        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border, shadowColor: colors.cardShadow }]}>
           <SetInfo currentSet={currentSet} totalSets={setCount} />
           <PhaseBadge isWorking={isWorking} />
 
@@ -81,24 +108,42 @@ export default function TimerScreen({ setCount, setDuration, restDuration, onBac
             {!isRunning && !isEnd && (
               <TimerButton
                 type="start"
-                onPress={startTimer}
+                onPress={handleStartTimer}
                 showRestart={showRestart}
               />
             )}
 
-            {isRunning && !(setDuration === 0 && isWorking) && !isEnd && (
-              <TimerButton
-                type={isPaused ? 'resume' : 'pause'}
-                onPress={togglePause}
-              />
+            {isRunning && !isEnd && (
+              <>
+                <View style={styles.buttonRow}>
+                  {!(setDuration === 0 && isWorking) && (
+                    <TimerButton
+                      type={isPaused ? 'resume' : 'pause'}
+                      onPress={handleTogglePause}
+                    />
+                  )}
+
+                  {setDuration === 0 && isWorking && (
+                    <TimerButton type="next" onPress={handleNextPhase} />
+                  )}
+
+                  <TimerButton type="reset" onPress={handleResetTimer} />
+                </View>
+
+                <View style={styles.buttonRow}>
+                  {isWorking && setDuration > 0 && (
+                    <TimerButton type="finishSet" onPress={handleNextPhase} />
+                  )}
+
+                  {!isWorking && (
+                    <TimerButton type="finishRest" onPress={handleNextPhase} />
+                  )}
+                </View>
+              </>
             )}
 
-            {isRunning && setDuration === 0 && isWorking && !isEnd && (
-              <TimerButton type="next" onPress={nextPhase} />
-            )}
-
-            {(isRunning || isEnd) && (
-              <TimerButton type="reset" onPress={resetTimer} />
+            {isEnd && (
+              <TimerButton type="reset" onPress={handleResetTimer} fullWidth={true} />
             )}
           </View>
 
@@ -116,7 +161,6 @@ export default function TimerScreen({ setCount, setDuration, restDuration, onBac
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F3F4F6',
   },
   timerScrollContent: {
     flexGrow: 1,
@@ -124,11 +168,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   card: {
-    backgroundColor: 'white',
     borderRadius: 16,
     padding: 16,
     gap: 24,
-    shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 4,
@@ -137,12 +179,16 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 8,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
   },
   timerContainer: {
     alignItems: 'center',
   },
   buttonContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 12,
+  },
+  buttonRow: {
     display: 'flex',
     flexDirection: 'row',
     justifyContent: 'center',

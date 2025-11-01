@@ -1,9 +1,10 @@
 import React, { useMemo, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
-import { CIRCLE_SIZE } from '../utils/constants';
+import { CIRCLE_SIZE, PROGRESS_THRESHOLDS, PROGRESS_COLORS, ANIMATION_DURATION, ANIMATION_CONFIG, CIRCLE_CONFIG } from '../utils/constants';
 import { formatTime } from '../utils/timeFormatter';
 import { useTranslation } from 'react-i18next';
+import { useTheme } from '../theme/ThemeContext';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -25,6 +26,7 @@ function TimerCircle({
   restDuration,
 }: TimerCircleProps) {
   const { t } = useTranslation();
+  const { colors } = useTheme();
   
   const radius = useMemo(() => CIRCLE_SIZE / 2 - 20, []);
   const circumference = useMemo(() => 2 * Math.PI * radius, [radius]);
@@ -38,8 +40,8 @@ function TimerCircle({
   useEffect(() => {
     Animated.spring(progressAnim, {
       toValue: progress,
-      tension: 50,
-      friction: 7,
+      tension: ANIMATION_CONFIG.SPRING_TENSION,
+      friction: ANIMATION_CONFIG.SPRING_FRICTION,
       useNativeDriver: false,
     }).start();
   }, [progress]);
@@ -49,12 +51,12 @@ function TimerCircle({
     Animated.sequence([
       Animated.timing(strokeColorOpacity, {
         toValue: 0,
-        duration: 200,
+        duration: ANIMATION_DURATION.MEDIUM,
         useNativeDriver: false,
       }),
       Animated.timing(strokeColorOpacity, {
         toValue: 1,
-        duration: 300,
+        duration: ANIMATION_DURATION.LONG,
         useNativeDriver: false,
       }),
     ]).start();
@@ -66,17 +68,14 @@ function TimerCircle({
     outputRange: [circumference, 0],
   });
 
-  // Progress'e göre renk hesaplama (0-33: yeşil, 33-66: turuncu, 66-100: kırmızı)
+  // Progress'e göre renk hesaplama
   const strokeColor = useMemo(() => {
-    if (progress <= 33) {
-      // İlk 1/3: Yeşil
-      return '#10B981';
-    } else if (progress <= 66) {
-      // Orta 1/3: Turuncu
-      return '#F59E0B';
+    if (progress <= PROGRESS_THRESHOLDS.GREEN_MAX) {
+      return PROGRESS_COLORS.GREEN;
+    } else if (progress <= PROGRESS_THRESHOLDS.ORANGE_MAX) {
+      return PROGRESS_COLORS.ORANGE;
     } else {
-      // Son 1/3: Kırmızı
-      return '#EF4444';
+      return PROGRESS_COLORS.RED;
     }
   }, [progress]);
 
@@ -87,12 +86,12 @@ function TimerCircle({
       Animated.sequence([
         Animated.timing(strokeColorOpacity, {
           toValue: 0.5,
-          duration: 150,
+          duration: ANIMATION_DURATION.SHORT,
           useNativeDriver: false,
         }),
         Animated.timing(strokeColorOpacity, {
           toValue: 1,
-          duration: 150,
+          duration: ANIMATION_DURATION.SHORT,
           useNativeDriver: false,
         }),
       ]).start();
@@ -101,12 +100,13 @@ function TimerCircle({
   }, [strokeColor]);
   
   const timerTextStyle = useMemo(() => {
-    // Timer durmuş, süre başlamış (progress > 0) ve bitmemiş (progress < 100) ise siyah
-    // İlk anda (progress = 0) ve son anda (progress = 100) renkli olacak
-    if (!isRunning && progress > 0 && progress < 100) return styles.stoppedTimerText;
+    // Timer durmuş, süre başlamış (progress > 0) ve bitmemiş (progress < 100) ise tema rengi
+    if (!isRunning && progress > 0 && progress < 100) {
+      return { color: colors.text };
+    }
     // Circle ile aynı renk (progress'e göre)
     return { color: strokeColor };
-  }, [isRunning, progress, strokeColor]);
+  }, [isRunning, progress, strokeColor, colors.text]);
 
   const displayText = useMemo(() => {
     return setDuration === 0 && isWorking ? '--:--' : formattedTime;
@@ -123,8 +123,8 @@ function TimerCircle({
           cx={CIRCLE_SIZE / 2}
           cy={CIRCLE_SIZE / 2}
           r={radius}
-          stroke="#E5E7EB"
-          strokeWidth="12"
+          stroke={colors.border}
+          strokeWidth={CIRCLE_CONFIG.STROKE_WIDTH}
           fill="none"
         />
         <AnimatedCircle
@@ -132,7 +132,7 @@ function TimerCircle({
           cy={CIRCLE_SIZE / 2}
           r={radius}
           stroke={strokeColor}
-          strokeWidth="12"
+          strokeWidth={CIRCLE_CONFIG.STROKE_WIDTH}
           fill="none"
           strokeDasharray={circumference}
           strokeDashoffset={strokeDashoffset}
@@ -144,9 +144,6 @@ function TimerCircle({
         <Text style={[styles.timerText, timerTextStyle]}>
           {displayText}
         </Text>
-        {showTimeless && (
-          <Text style={styles.timelessText}>{t('timeless')}</Text>
-        )}
       </View>
     </View>
   );
@@ -174,17 +171,10 @@ const styles = StyleSheet.create({
     fontSize: 48,
     fontWeight: 'bold',
   },
-  stoppedTimerText: {
-    color: '#1F2937',
-  },
   workingTimerText: {
     color: '#10B981',
   },
   restTimerText: {
     color: '#3B82F6',
-  },
-  timelessText: {
-    fontSize: 14,
-    color: '#6B7280',
   },
 });

@@ -70,7 +70,7 @@ For complete documentation, installation instructions, troubleshooting, and deve
 - **i18next** for internationalization
 - **expo-speech** for text-to-speech
 - **react-native-svg** for circular progress indicator
-- **expo-av** for audio management
+- **expo-audio** for audio management
 
 ## 📱 Screenshots
 

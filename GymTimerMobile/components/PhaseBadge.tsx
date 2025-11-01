@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { useTheme } from '../theme/ThemeContext';
 
 type PhaseBadgeProps = {
   isWorking: boolean;
@@ -8,21 +9,25 @@ type PhaseBadgeProps = {
 
 function PhaseBadge({ isWorking }: PhaseBadgeProps) {
   const { t } = useTranslation();
+  const { colors } = useTheme();
+
+  const badgeStyle = useMemo(() => [
+    styles.badge,
+    {
+      backgroundColor: isWorking ? colors.workingBadge.bg : colors.restBadge.bg,
+      borderColor: isWorking ? colors.workingBadge.border : colors.restBadge.border,
+    }
+  ], [isWorking, colors]);
+
+  const textStyle = useMemo(() => [
+    styles.text,
+    { color: isWorking ? colors.workingBadge.text : colors.restBadge.text }
+  ], [isWorking, colors]);
 
   return (
     <View style={styles.container}>
-      <View
-        style={[
-          styles.badge,
-          isWorking ? styles.workingBadge : styles.restBadge,
-        ]}
-      >
-        <Text
-          style={[
-            styles.text,
-            isWorking ? styles.workingText : styles.restText,
-          ]}
-        >
+      <View style={badgeStyle}>
+        <Text style={textStyle}>
           {isWorking ? t('workTime') : t('restTime')}
         </Text>
       </View>
@@ -40,23 +45,9 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     borderWidth: 2,
   },
-  workingBadge: {
-    backgroundColor: '#DCFCE7',
-    borderColor: '#86EFAC',
-  },
-  restBadge: {
-    backgroundColor: '#DBEAFE',
-    borderColor: '#93C5FD',
-  },
   text: {
     fontSize: 18,
     fontWeight: '600',
-  },
-  workingText: {
-    color: '#166534',
-  },
-  restText: {
-    color: '#1E40AF',
   },
 });
 
