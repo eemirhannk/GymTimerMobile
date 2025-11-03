@@ -101,3 +101,20 @@ export const TIMER = {
   INTERVAL_MS: 1000, // 1 saniye = 1000ms
 } as const;
 
+// Varsayılan değerler
+export const DEFAULT_VALUES = {
+  SET_COUNT: 3,
+  SET_DURATION: 0,
+  REST_DURATION: 60,
+  SOUND_MODE: 'effects' as const,
+} as const;
+
+// Error key mapping
+export const ERROR_KEY_MAP = {
+  invalid_number: 'validationInvalidNumber',
+  min_1: 'validationSetCountMin',
+  max_50: 'validationSetCountMax',
+  min_0: 'validationDurationMin',
+  max_300: 'validationDurationMax',
+} as const;
+

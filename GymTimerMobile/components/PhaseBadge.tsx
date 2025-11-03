@@ -26,7 +26,12 @@ function PhaseBadge({ isWorking }: PhaseBadgeProps) {
 
   return (
     <View style={styles.container}>
-      <View style={badgeStyle}>
+      <View
+        accessible={true}
+        accessibilityLabel={isWorking ? t('workTime') : t('restTime')}
+        accessibilityRole="text"
+        style={badgeStyle}
+      >
         <Text style={textStyle}>
           {isWorking ? t('workTime') : t('restTime')}
         </Text>

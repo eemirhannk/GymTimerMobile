@@ -44,8 +44,42 @@ function TimerButton({
     fullWidth && styles.fullWidthButton
   ], [type, fullWidth]);
 
+  const accessibilityLabel = useMemo(() => {
+    switch (type) {
+      case 'start':
+        return showRestart ? t('restart') : t('start');
+      case 'pause':
+        return t('pause');
+      case 'resume':
+        return t('resume');
+      case 'next':
+        return t('nextRest');
+      case 'reset':
+        return t('reset');
+      case 'finishSet':
+        return t('finishSet');
+      case 'finishRest':
+        return t('finishRest');
+    }
+  }, [type, showRestart, t]);
+
   return (
-    <TouchableOpacity style={buttonStyle} onPress={onPress}>
+    <TouchableOpacity
+      accessible={true}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityRole="button"
+      accessibilityHint={
+        type === 'start' ? t('start') + ' timer' :
+        type === 'pause' ? t('pause') + ' timer' :
+        type === 'resume' ? t('resume') + ' timer' :
+        type === 'reset' ? t('reset') + ' timer' :
+        type === 'next' ? t('nextRest') :
+        type === 'finishSet' ? t('finishSet') :
+        t('finishRest')
+      }
+      style={buttonStyle}
+      onPress={onPress}
+    >
       <Text style={styles.buttonText}>{buttonText}</Text>
     </TouchableOpacity>
   );

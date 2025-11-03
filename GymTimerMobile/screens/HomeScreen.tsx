@@ -16,8 +16,9 @@ import * as Speech from 'expo-speech';
 import { useAudioPlayer, AudioSource } from 'expo-audio';
 import { sanitizeSetCount, sanitizeDuration, validateSetCount, validateDuration } from '../utils/validators';
 import { SoundMode } from '../types';
-import { showErrorToast } from '../utils/toast';
 import { useTheme } from '../theme/ThemeContext';
+import { useInputValidation } from '../hooks/useInputValidation';
+import { DEFAULT_VALUES } from '../utils/constants';
 
 const SOUND_EFFECT_FILE = require('../assets/sounds/rest.mp3');
 
@@ -48,6 +49,22 @@ export default function HomeScreen({
   const { colors, mode, setMode } = useTheme();
   const player = useAudioPlayer(SOUND_EFFECT_FILE as AudioSource);
 
+  // Input validation hooks
+  const setCountValidation = useInputValidation({
+    validator: validateSetCount,
+    sanitizer: sanitizeSetCount,
+  });
+
+  const setDurationValidation = useInputValidation({
+    validator: validateDuration,
+    sanitizer: sanitizeDuration,
+  });
+
+  const restDurationValidation = useInputValidation({
+    validator: validateDuration,
+    sanitizer: sanitizeDuration,
+  });
+
   useEffect(() => {
     player.loop = false;
     player.volume = 1.0;
@@ -70,84 +87,31 @@ export default function HomeScreen({
         });
       }
     } catch (error) {
-      showErrorToast('errorPlaySound');
+      console.error('Error playing feedback sound:', error);
+      // showErrorToast artık useInputValidation içinde
     }
   }, [t, player]);
 
-  const handleSetCountChange = (text: string) => {
-    // Önce validation yap
-    const validation = validateSetCount(text);
-    if (!validation.valid && validation.error && text !== '') {
-      // Toast göster
-      let errorKey = 'validationInvalidNumber';
-      switch (validation.error) {
-        case 'invalid_number':
-          errorKey = 'validationInvalidNumber';
-          break;
-        case 'min_1':
-          errorKey = 'validationSetCountMin';
-          break;
-        case 'max_50':
-          errorKey = 'validationSetCountMax';
-          break;
-      }
-      showErrorToast(errorKey);
-    }
-    
-    // Sanitize et ve güncelle
-    const sanitized = sanitizeSetCount(text);
-    onSetCountChange(sanitized);
-  };
+  const handleSetCountChange = useCallback(
+    (text: string) => {
+      setCountValidation.handleChange(text, onSetCountChange);
+    },
+    [setCountValidation, onSetCountChange]
+  );
 
-  const handleSetDurationChange = (text: string) => {
-    // Önce validation yap
-    const validation = validateDuration(text);
-    if (!validation.valid && validation.error && text !== '') {
-      // Toast göster
-      let errorKey = 'validationInvalidNumber';
-      switch (validation.error) {
-        case 'invalid_number':
-          errorKey = 'validationInvalidNumber';
-          break;
-        case 'min_0':
-          errorKey = 'validationDurationMin';
-          break;
-        case 'max_300':
-          errorKey = 'validationDurationMax';
-          break;
-      }
-      showErrorToast(errorKey);
-    }
-    
-    // Sanitize et ve güncelle
-    const sanitized = sanitizeDuration(text);
-    onSetDurationChange(sanitized);
-  };
+  const handleSetDurationChange = useCallback(
+    (text: string) => {
+      setDurationValidation.handleChange(text, onSetDurationChange);
+    },
+    [setDurationValidation, onSetDurationChange]
+  );
 
-  const handleRestDurationChange = (text: string) => {
-    // Önce validation yap
-    const validation = validateDuration(text);
-    if (!validation.valid && validation.error && text !== '') {
-      // Toast göster
-      let errorKey = 'validationInvalidNumber';
-      switch (validation.error) {
-        case 'invalid_number':
-          errorKey = 'validationInvalidNumber';
-          break;
-        case 'min_0':
-          errorKey = 'validationDurationMin';
-          break;
-        case 'max_300':
-          errorKey = 'validationDurationMax';
-          break;
-      }
-      showErrorToast(errorKey);
-    }
-    
-    // Sanitize et ve güncelle
-    const sanitized = sanitizeDuration(text);
-    onRestDurationChange(sanitized);
-  };
+  const handleRestDurationChange = useCallback(
+    (text: string) => {
+      restDurationValidation.handleChange(text, onRestDurationChange);
+    },
+    [restDurationValidation, onRestDurationChange]
+  );
 
   const handleSoundModeChange = useCallback((value: boolean) => {
     const newMode: SoundMode = value ? 'speech' : 'effects';
@@ -188,6 +152,10 @@ export default function HomeScreen({
             <View style={styles.inputGroup}>
               <Text style={[styles.label, { color: colors.text }]}>{t('setCount')}</Text>
               <TextInput
+                accessible={true}
+                accessibilityLabel={t('setCount')}
+                accessibilityHint={t('setCount') + ' ' + t('ph_example3')}
+                accessibilityRole="none"
                 style={[styles.input, { borderColor: colors.border, color: colors.text, backgroundColor: colors.surface }]}
                 value={setCount}
                 onChangeText={handleSetCountChange}
@@ -200,6 +168,10 @@ export default function HomeScreen({
             <View style={styles.inputGroup}>
               <Text style={[styles.label, { color: colors.text }]}>{t('setDuration')}</Text>
               <TextInput
+                accessible={true}
+                accessibilityLabel={t('setDuration')}
+                accessibilityHint={t('setHint')}
+                accessibilityRole="none"
                 style={[styles.input, { borderColor: colors.border, color: colors.text, backgroundColor: colors.surface }]}
                 value={setDuration}
                 onChangeText={handleSetDurationChange}
@@ -213,6 +185,10 @@ export default function HomeScreen({
             <View style={styles.inputGroup}>
               <Text style={[styles.label, { color: colors.text }]}>{t('restDuration')}</Text>
               <TextInput
+                accessible={true}
+                accessibilityLabel={t('restDuration')}
+                accessibilityHint={t('restDuration') + ' ' + t('ph_example60')}
+                accessibilityRole="none"
                 style={[styles.input, { borderColor: colors.border, color: colors.text, backgroundColor: colors.surface }]}
                 value={restDuration}
                 onChangeText={handleRestDurationChange}
@@ -239,6 +215,10 @@ export default function HomeScreen({
             </View>
 
             <TouchableOpacity 
+              accessible={true}
+              accessibilityLabel={t('start')}
+              accessibilityHint={t('start') + ' - ' + t('setCount') + ': ' + setCount + ', ' + t('restDuration') + ': ' + restDuration}
+              accessibilityRole="button"
               style={[styles.startButton, { backgroundColor: colors.primary }]} 
               onPress={onStart}
             >

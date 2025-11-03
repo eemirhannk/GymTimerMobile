@@ -19,12 +19,31 @@ function TimerHeader({
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity onPress={onBack}>
+      <TouchableOpacity
+        accessible={true}
+        accessibilityLabel={t('back')}
+        accessibilityRole="button"
+        accessibilityHint={t('back') + ' - ' + t('title')}
+        onPress={onBack}
+      >
         <Text style={[styles.backText, { color: colors.text }]}>←</Text>
       </TouchableOpacity>
-      <Text style={[styles.title, { color: colors.text }]}>{t('title')}</Text>
+      <Text 
+        accessible={true}
+        accessibilityRole="header"
+        style={[styles.title, { color: colors.text }]}
+      >
+        {t('title')}
+      </Text>
       <View style={styles.muteContainer}>
-        <TouchableOpacity onPress={onToggleMute}>
+        <TouchableOpacity
+          accessible={true}
+          accessibilityLabel={isMuted ? 'Unmute' : 'Mute'}
+          accessibilityRole="button"
+          accessibilityHint={isMuted ? 'Unmute sound' : 'Mute sound'}
+          accessibilityState={{ checked: isMuted }}
+          onPress={onToggleMute}
+        >
           <Text style={[styles.backText, { color: colors.text }]}>{isMuted ? '🔇' : '🔊'}</Text>
         </TouchableOpacity>
       </View>

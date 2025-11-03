@@ -141,7 +141,12 @@ function TimerCircle({
         />
       </Svg>
       <View style={styles.timerTextContainer}>
-        <Text style={[styles.timerText, timerTextStyle]}>
+        <Text
+          accessible={true}
+          accessibilityLabel={t('workTime') + ' ' + displayText}
+          accessibilityRole="text"
+          style={[styles.timerText, timerTextStyle]}
+        >
           {displayText}
         </Text>
       </View>

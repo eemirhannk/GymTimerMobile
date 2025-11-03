@@ -30,7 +30,7 @@ class ErrorBoundaryClass extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    // Error logged silently
+    console.error('Error caught by boundary:', error.message);
   }
 
   handleReset = () => {
@@ -63,7 +63,14 @@ function ErrorFallback({ error, onReset }: { error: Error | null; onReset: () =>
       {error && (
         <Text style={[styles.errorText, { color: colors.textTertiary }]}>{error.message}</Text>
       )}
-      <TouchableOpacity style={[styles.button, { backgroundColor: colors.primary }]} onPress={onReset}>
+      <TouchableOpacity
+        accessible={true}
+        accessibilityLabel={i18n.t('errorRetry')}
+        accessibilityRole="button"
+        accessibilityHint={i18n.t('errorRetry') + ' - ' + i18n.t('errorMessage')}
+        style={[styles.button, { backgroundColor: colors.primary }]}
+        onPress={onReset}
+      >
         <Text style={styles.buttonText}>{i18n.t('errorRetry')}</Text>
       </TouchableOpacity>
     </View>

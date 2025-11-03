@@ -9,12 +9,39 @@ import ErrorBoundary from './components/ErrorBoundary';
 import { ThemeProvider } from './theme/ThemeContext';
 import { sanitizeSetCount, sanitizeDuration } from './utils/validators';
 import { SoundMode } from './types';
+import { DEFAULT_VALUES } from './utils/constants';
+import { usePersistedState } from './hooks/usePersistedState';
+
+// Storage keys
+const STORAGE_KEYS = {
+  SET_COUNT: '@gymtimer:setCount',
+  SET_DURATION: '@gymtimer:setDuration',
+  REST_DURATION: '@gymtimer:restDuration',
+  SOUND_MODE: '@gymtimer:soundMode',
+} as const;
 
 function AppContent() {
-  const [setCount, setSetCount] = useState<string>('3');
-  const [setDuration, setSetDuration] = useState<string>('0');
-  const [restDuration, setRestDuration] = useState<string>('60');
-  const [soundMode, setSoundMode] = useState<SoundMode>('effects');
+  // Persisted states
+  const [setCount, setSetCount] = usePersistedState<string>({
+    key: STORAGE_KEYS.SET_COUNT,
+    defaultValue: DEFAULT_VALUES.SET_COUNT.toString(),
+  });
+
+  const [setDuration, setSetDuration] = usePersistedState<string>({
+    key: STORAGE_KEYS.SET_DURATION,
+    defaultValue: DEFAULT_VALUES.SET_DURATION.toString(),
+  });
+
+  const [restDuration, setRestDuration] = usePersistedState<string>({
+    key: STORAGE_KEYS.REST_DURATION,
+    defaultValue: DEFAULT_VALUES.REST_DURATION.toString(),
+  });
+
+  const [soundMode, setSoundMode] = usePersistedState<SoundMode>({
+    key: STORAGE_KEYS.SOUND_MODE,
+    defaultValue: DEFAULT_VALUES.SOUND_MODE,
+  });
+
   const [currentScreen, setCurrentScreen] = useState('home');
 
   const handleStart = () => {
@@ -25,23 +52,23 @@ function AppContent() {
     setCurrentScreen('home');
   };
 
-  const handleSetCountChange = (text: string) => {
+  const handleSetCountChange = async (text: string) => {
     const sanitized = sanitizeSetCount(text);
-    setSetCount(sanitized);
+    await setSetCount(sanitized);
   };
 
-  const handleSetDurationChange = (text: string) => {
+  const handleSetDurationChange = async (text: string) => {
     const sanitized = sanitizeDuration(text);
-    setSetDuration(sanitized);
+    await setSetDuration(sanitized);
   };
 
-  const handleRestDurationChange = (text: string) => {
+  const handleRestDurationChange = async (text: string) => {
     const sanitized = sanitizeDuration(text);
-    setRestDuration(sanitized);
+    await setRestDuration(sanitized);
   };
 
-  const handleSoundModeChange = (mode: SoundMode) => {
-    setSoundMode(mode);
+  const handleSoundModeChange = async (mode: SoundMode) => {
+    await setSoundMode(mode);
   };
 
   return (

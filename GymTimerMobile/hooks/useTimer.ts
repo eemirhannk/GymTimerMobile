@@ -45,6 +45,20 @@ export const useTimer = ({
   const isWorkingRef = useRef(true);
   const currentSetRef = useRef(1);
   const isRunningRef = useRef(false);
+  
+  // Timer precision için başlangıç zamanı
+  const startTimeRef = useRef<number | null>(null);
+  const initialDurationRef = useRef<number>(setDuration);
+  
+  // Callback'leri ref'lerde sakla (dependency array'i küçültmek için)
+  const onPhaseChangeRef = useRef(onPhaseChange);
+  const onCompleteRef = useRef(onComplete);
+  
+  // Callback ref'lerini güncelle
+  useEffect(() => {
+    onPhaseChangeRef.current = onPhaseChange;
+    onCompleteRef.current = onComplete;
+  }, [onPhaseChange, onComplete]);
 
   const clearIntervalFn = useCallback(() => {
     if (intervalRef.current) {
@@ -55,20 +69,21 @@ export const useTimer = ({
 
   const handleTimeEnd = useCallback(() => {
     clearIntervalFn();
+    startTimeRef.current = null; // Timer precision reset
 
     if (isWorkingRef.current) {
       if (currentSetRef.current < setCount) {
         isWorkingRef.current = false;
         setIsWorking(false);
         timeLeftRef.current = restDuration;
+        initialDurationRef.current = restDuration;
         setTimeLeft(restDuration);
-        onPhaseChange?.('rest', currentSetRef.current);
-        // startInterval'ı aşağıda tanımlayacağız, bu yüzden burada referansını saklayacağız
+        onPhaseChangeRef.current?.('rest', currentSetRef.current);
       } else {
         setIsRunning(false);
         isRunningRef.current = false;
         setIsEnd(true);
-        onComplete?.();
+        onCompleteRef.current?.();
         return;
       }
     } else {
@@ -77,36 +92,54 @@ export const useTimer = ({
       isWorkingRef.current = true;
       setIsWorking(true);
       timeLeftRef.current = setDuration;
+      initialDurationRef.current = setDuration;
       setTimeLeft(setDuration);
-      onPhaseChange?.('work', currentSetRef.current);
+      onPhaseChangeRef.current?.('work', currentSetRef.current);
     }
 
     // Interval'ı yeniden başlat (eğer gerekirse)
     if (setDuration === 0 && isWorkingRef.current) {
       return;
     }
-    clearIntervalFn();
-    intervalRef.current = setInterval(() => {
-      if (timeLeftRef.current > 0) {
-        timeLeftRef.current--;
-        setTimeLeft(timeLeftRef.current);
-      } else {
-        handleTimeEnd();
-      }
-    }, TIMER.INTERVAL_MS);
-  }, [setCount, restDuration, setDuration, setTimeLeft, setIsWorking, setCurrentSet, setIsRunning, setIsEnd, onPhaseChange, onComplete, clearIntervalFn]);
+    // Yeni interval başlat (startInterval otomatik olarak precision'ı ayarlar)
+    startInterval();
+  }, [setCount, restDuration, setDuration, setTimeLeft, setIsWorking, setCurrentSet, setIsRunning, setIsEnd, clearIntervalFn, startInterval]);
 
   const startInterval = useCallback(() => {
     if (setDuration === 0 && isWorkingRef.current) {
       return;
     }
-    clearIntervalFn();
+    // Interval zaten varsa temizle, yoksa direkt başlat
+    if (intervalRef.current) {
+      clearIntervalFn();
+    }
+    
+    // Timer precision: Başlangıç zamanını kaydet
+    startTimeRef.current = Date.now();
+    initialDurationRef.current = timeLeftRef.current;
+    
     intervalRef.current = setInterval(() => {
-      if (timeLeftRef.current > 0) {
-        timeLeftRef.current--;
-        setTimeLeft(timeLeftRef.current);
+      // Date.now() tabanlı daha hassas hesaplama
+      if (startTimeRef.current !== null) {
+        const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
+        const calculatedTimeLeft = Math.max(0, initialDurationRef.current - elapsed);
+        
+        if (calculatedTimeLeft !== timeLeftRef.current) {
+          timeLeftRef.current = calculatedTimeLeft;
+          setTimeLeft(calculatedTimeLeft);
+        }
+        
+        if (calculatedTimeLeft === 0) {
+          handleTimeEnd();
+        }
       } else {
-        handleTimeEnd();
+        // Fallback: Eski yöntem (startTimeRef null ise)
+        if (timeLeftRef.current > 0) {
+          timeLeftRef.current--;
+          setTimeLeft(timeLeftRef.current);
+        } else {
+          handleTimeEnd();
+        }
       }
     }, TIMER.INTERVAL_MS);
   }, [setDuration, setTimeLeft, handleTimeEnd, clearIntervalFn]);
@@ -118,33 +151,37 @@ export const useTimer = ({
 
     if (isWorkingRef.current) {
       timeLeftRef.current = setDuration;
+      initialDurationRef.current = setDuration;
       setTimeLeft(setDuration);
-      onPhaseChange?.('work', currentSetRef.current);
+      onPhaseChangeRef.current?.('work', currentSetRef.current);
     } else {
       timeLeftRef.current = restDuration;
+      initialDurationRef.current = restDuration;
       setTimeLeft(restDuration);
-      onPhaseChange?.('rest', currentSetRef.current);
+      onPhaseChangeRef.current?.('rest', currentSetRef.current);
     }
 
     startInterval();
-  }, [setDuration, restDuration, onPhaseChange, startInterval, setTimeLeft]);
+  }, [setDuration, restDuration, startInterval, setTimeLeft]);
 
   const nextPhase = useCallback(() => {
     clearIntervalFn();
+    startTimeRef.current = null; // Timer precision reset
 
     if (isWorking) {
       if (currentSet < setCount) {
         setIsWorking(false);
         isWorkingRef.current = false;
         timeLeftRef.current = restDuration;
+        initialDurationRef.current = restDuration;
         setTimeLeft(restDuration);
-        onPhaseChange?.('rest', currentSet);
+        onPhaseChangeRef.current?.('rest', currentSet);
         startInterval();
       } else {
         setIsRunning(false);
         isRunningRef.current = false;
         setIsEnd(true);
-        onComplete?.();
+        onCompleteRef.current?.();
       }
     } else {
       const nextSet = currentSet + 1;
@@ -153,31 +190,37 @@ export const useTimer = ({
       setIsWorking(true);
       isWorkingRef.current = true;
       timeLeftRef.current = setDuration;
+      initialDurationRef.current = setDuration;
       setTimeLeft(setDuration);
-      onPhaseChange?.('work', nextSet);
+      onPhaseChangeRef.current?.('work', nextSet);
       if (setDuration > 0) {
         startInterval();
       }
     }
-  }, [isWorking, currentSet, setCount, setDuration, restDuration, setTimeLeft, setIsWorking, setCurrentSet, setIsRunning, setIsEnd, onPhaseChange, onComplete, clearIntervalFn, startInterval]);
+  }, [isWorking, currentSet, setCount, setDuration, restDuration, setTimeLeft, setIsWorking, setCurrentSet, setIsRunning, setIsEnd, clearIntervalFn, startInterval]);
 
   const togglePause = useCallback(() => {
     if (isPaused) {
       setIsPaused(false);
+      // Pause'tan devam ederken kalan süreyi koru ve timer'ı başlat
+      initialDurationRef.current = timeLeftRef.current;
       startInterval();
     } else {
       setIsPaused(true);
       clearIntervalFn();
+      startTimeRef.current = null; // Timer precision reset
     }
   }, [isPaused, startInterval, clearIntervalFn]);
 
   const resetTimer = useCallback(() => {
     clearIntervalFn();
+    startTimeRef.current = null; // Timer precision reset
     currentSetRef.current = 1;
     setCurrentSet(1);
     isWorkingRef.current = true;
     setIsWorking(true);
     timeLeftRef.current = 0;
+    initialDurationRef.current = 0;
     setTimeLeft(0);
     setIsRunning(false);
     isRunningRef.current = false;
