@@ -1,12 +1,13 @@
-import { LIMITS, ERROR_KEY_MAP } from './constants';
+import { LIMITS, ERROR_KEY_MAP, PREMIUM } from './constants';
 import { ValidationResult } from '../types';
 
 /**
  * Validates set count input
  * @param text - Input text to validate
+ * @param isPremium - Whether user has premium access
  * @returns ValidationResult with i18n error key if invalid
  */
-export const validateSetCount = (text: string): ValidationResult => {
+export const validateSetCount = (text: string, isPremium: boolean = false): ValidationResult => {
   if (text === '') {
     return { valid: true }; // Boş bırakılabilir, ancak submit'te kontrol edilir
   }
@@ -21,9 +22,13 @@ export const validateSetCount = (text: string): ValidationResult => {
     return { valid: false, error: ERROR_KEY_MAP.min_1 };
   }
   
-  if (num > LIMITS.SET_COUNT_MAX) {
-    return { valid: false, error: ERROR_KEY_MAP.max_50 };
+  // Premium kontrolü: Ücretsiz kullanıcılar için maksimum set sayısı, premium için sınırsız
+  if (!isPremium) {
+    if (num > PREMIUM.FREE_MAX_SETS) {
+      return { valid: false, error: ERROR_KEY_MAP.max_5_free };
+    }
   }
+  // Premium kullanıcılar için sınırsız (max kontrolü yok)
 
   return { valid: true };
 };
@@ -31,9 +36,10 @@ export const validateSetCount = (text: string): ValidationResult => {
 /**
  * Validates duration input
  * @param text - Input text to validate
+ * @param isPremium - Whether user has premium access
  * @returns ValidationResult with i18n error key if invalid
  */
-export const validateDuration = (text: string): ValidationResult => {
+export const validateDuration = (text: string, isPremium: boolean = false): ValidationResult => {
   if (text === '') {
     return { valid: true }; // Boş bırakılabilir
   }
@@ -48,35 +54,47 @@ export const validateDuration = (text: string): ValidationResult => {
     return { valid: false, error: ERROR_KEY_MAP.min_0 };
   }
   
-  if (num > LIMITS.DURATION_MAX) {
-    return { valid: false, error: ERROR_KEY_MAP.max_300 };
+  // Premium kontrolü: Ücretsiz kullanıcılar için maksimum süre, premium için sınırsız
+  if (!isPremium) {
+    if (num > PREMIUM.FREE_MAX_DURATION) {
+      return { valid: false, error: ERROR_KEY_MAP.max_300_free };
+    }
   }
+  // Premium kullanıcılar için sınırsız (max kontrolü yok)
 
   return { valid: true };
 };
 
-export const sanitizeSetCount = (text: string): string => {
+export const sanitizeSetCount = (text: string, isPremium: boolean = false): string => {
   if (text === '') return text;
   
   if (!/^\d+$/.test(text)) return '';
   
   const num = parseInt(text, 10);
   
-  if (num > LIMITS.SET_COUNT_MAX) return LIMITS.SET_COUNT_MAX.toString();
+  // Premium kontrolü: Ücretsiz kullanıcılar için maksimum set sayısı, premium için sınırsız
+  if (!isPremium && num > PREMIUM.FREE_MAX_SETS) {
+    return PREMIUM.FREE_MAX_SETS.toString();
+  }
+  
   if (num < LIMITS.SET_COUNT_MIN && num > 0) return LIMITS.SET_COUNT_MIN.toString();
   if (num === 0) return LIMITS.SET_COUNT_MIN.toString();
   
   return text;
 };
 
-export const sanitizeDuration = (text: string): string => {
+export const sanitizeDuration = (text: string, isPremium: boolean = false): string => {
   if (text === '') return text;
   
   if (!/^\d+$/.test(text)) return '';
   
   const num = parseInt(text, 10);
   
-  if (num > LIMITS.DURATION_MAX) return LIMITS.DURATION_MAX.toString();
+  // Premium kontrolü: Ücretsiz kullanıcılar için maksimum süre, premium için sınırsız
+  if (!isPremium && num > PREMIUM.FREE_MAX_DURATION) {
+    return PREMIUM.FREE_MAX_DURATION.toString();
+  }
+  
   if (num < LIMITS.DURATION_MIN) return LIMITS.DURATION_MIN.toString();
   
   return text;

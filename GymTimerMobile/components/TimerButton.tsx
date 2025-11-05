@@ -1,7 +1,7 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, memo } from 'react';
 import { TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { BUTTON_COLORS, BORDER_RADIUS, SPACING, TYPOGRAPHY } from '../utils/constants';
+import { BORDER_RADIUS, SPACING, TYPOGRAPHY } from '../utils/constants';
 import { useTheme } from '../theme/ThemeContext';
 
 type TimerButtonProps = {
@@ -11,13 +11,14 @@ type TimerButtonProps = {
   fullWidth?: boolean;
 };
 
-function TimerButton({
+const TimerButton = memo(function TimerButton({
   type,
   onPress,
   showRestart = false,
   fullWidth = false,
 }: TimerButtonProps) {
   const { t } = useTranslation();
+  const { colors } = useTheme();
 
   const buttonText = useMemo(() => {
     switch (type) {
@@ -38,11 +39,34 @@ function TimerButton({
     }
   }, [type, showRestart, t]);
 
-  const buttonStyle = useMemo(() => [
-    styles.button,
-    styles[`${type}Button`],
-    fullWidth && styles.fullWidthButton
-  ], [type, fullWidth]);
+  const buttonStyle = useMemo(() => {
+    const buttonColors: Record<string, string> = {
+      start: colors.button.start,
+      pause: colors.button.pause,
+      resume: colors.button.resume,
+      next: colors.button.next,
+      reset: colors.button.reset,
+      finishSet: colors.button.finishSet,
+      finishRest: colors.button.finishRest,
+    };
+
+    const widthStyles: Record<string, { width: string }> = {
+      start: { width: '100%' },
+      pause: { width: '50%' },
+      resume: { width: '50%' },
+      next: { width: '50%' },
+      reset: { width: '50%' },
+      finishSet: { width: '100%' },
+      finishRest: { width: '100%' },
+    };
+
+    return [
+      styles.button,
+      { backgroundColor: buttonColors[type] },
+      widthStyles[type],
+      fullWidth && styles.fullWidthButton
+    ];
+  }, [type, fullWidth, colors.button]);
 
   const accessibilityLabel = useMemo(() => {
     switch (type) {
@@ -83,9 +107,9 @@ function TimerButton({
       <Text style={styles.buttonText}>{buttonText}</Text>
     </TouchableOpacity>
   );
-}
+});
 
-export default React.memo(TimerButton);
+export default TimerButton;
 
 const styles = StyleSheet.create({
   button: {
@@ -94,34 +118,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  startButton: {
-    backgroundColor: BUTTON_COLORS.START,
-    width: '100%',
-  },
-  pauseButton: {
-    backgroundColor: BUTTON_COLORS.PAUSE,
-    width: '50%',
-  },
-  resumeButton: {
-    backgroundColor: BUTTON_COLORS.RESUME,
-    width: '50%',
-  },
-  nextButton: {
-    backgroundColor: BUTTON_COLORS.NEXT,
-    width: '50%',
-  },
-  resetButton: {
-    backgroundColor: BUTTON_COLORS.RESET,
-    width: '50%',
-  },
-  finishSetButton: {
-    backgroundColor: BUTTON_COLORS.FINISH_SET,
-    width: '100%',
-  },
-  finishRestButton: {
-    backgroundColor: BUTTON_COLORS.FINISH_REST,
-    width: '100%',
   },
   buttonText: {
     color: 'white',

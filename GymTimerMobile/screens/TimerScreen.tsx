@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useEffect, useRef, memo } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
@@ -8,6 +8,10 @@ import { useTimer } from '../hooks/useTimer';
 import { useSpeech } from '../hooks/useSpeech';
 import { useHaptics } from '../hooks/useHaptics';
 import { useTheme } from '../theme/ThemeContext';
+import { useWorkoutHistory } from '../hooks/useWorkoutHistory';
+import { usePremium } from '../hooks/usePremium';
+import { useTranslation } from 'react-i18next';
+import { WORKOUT } from '../utils/constants';
 import TimerHeader from '../components/TimerHeader';
 import SetInfo from '../components/SetInfo';
 import PhaseBadge from '../components/PhaseBadge';
@@ -15,9 +19,12 @@ import TimerCircle from '../components/TimerCircle';
 import TimerButton from '../components/TimerButton';
 import InfoPanel from '../components/InfoPanel';
 
-export default function TimerScreen({ setCount, setDuration, restDuration, soundMode, onBack }: TimerScreenProps) {
+const TimerScreen = memo(function TimerScreen({ setCount, setDuration, restDuration, templateSequence, onBack }: TimerScreenProps) {
+  const { t } = useTranslation();
   const { colors } = useTheme();
-  const { speakKey, isMuted, toggleMute } = useSpeech(soundMode);
+  const { isPremium } = usePremium();
+  const { saveWorkout } = useWorkoutHistory();
+  const { speakKey, isMuted, toggleMute } = useSpeech();
   const { triggerImpact, triggerNotification, triggerSelection } = useHaptics();
 
   const handlePhaseChange = useCallback((phase: 'work' | 'rest', setNumber: number) => {
@@ -41,6 +48,10 @@ export default function TimerScreen({ setCount, setDuration, restDuration, sound
     isRunning,
     isPaused,
     isEnd,
+    workoutStartTime,
+    currentSetRef, // Ref'i al (unmount'ta güncel değeri almak için)
+    workoutStartTimeRef, // Ref'i al (unmount'ta güncel değeri almak için)
+    getRestDurationForSet, // Rest duration hesaplama fonksiyonu
     startTimer,
     togglePause,
     resetTimer,
@@ -49,9 +60,130 @@ export default function TimerScreen({ setCount, setDuration, restDuration, sound
     setCount,
     setDuration,
     restDuration,
+    templateSequence,
     onPhaseChange: handlePhaseChange,
     onComplete: handleComplete,
   });
+
+  // Rest duration hesapla (template sequence varsa)
+  const currentRestDuration = useMemo(() => {
+    if (templateSequence && templateSequence.length > 0 && getRestDurationForSet) {
+      return getRestDurationForSet(currentSet);
+    }
+    return restDuration;
+  }, [templateSequence, getRestDurationForSet, currentSet, restDuration]);
+
+  // Antrenman kaydı için minimum set sayısı (sadece 5 setten fazla setlik antrenmanlar için)
+  
+  // Tekrar kayıt oluşturulmasını engellemek için ref kullan
+  const workoutSavedRef = useRef(false);
+  
+  // Geri tuşuna basıldığında kayıt atmamak için flag
+  const isBackPressedRef = useRef(false);
+  
+  // isPremium değerini ref'te tut (unmount'ta closure sorununu önlemek için)
+  const isPremiumRef = useRef(isPremium);
+  useEffect(() => {
+    isPremiumRef.current = isPremium;
+  }, [isPremium]);
+  
+  // Geri tuşuna basıldığında flag'i set et
+  const handleBack = useCallback(() => {
+    isBackPressedRef.current = true;
+    onBack();
+  }, [onBack]);
+  
+  // isEnd state'ini ref'te tut (unmount'ta closure sorununu önlemek için)
+  const isEndRef = useRef(isEnd);
+  useEffect(() => {
+    isEndRef.current = isEnd;
+  }, [isEnd]);
+
+  // Ortak kayıt fonksiyonu:
+  // - 5 set veya daha az setlik antrenmanlar için: Antrenman sonunda (tamamlandığında) kayıt at
+  // - 5 setten fazla setlik antrenmanlar için: 5 set tamamlandıktan sonra 6. sete başladığında kayıt at
+  // Ref kullanarak güncel değerleri al (unmount'ta closure sorununu önlemek için)
+  const saveWorkoutIfNeeded = useCallback(() => {
+    // Ref'lerden güncel değerleri al (unmount'ta closure sorununu önlemek için)
+    const currentSetValue = currentSetRef?.current ?? currentSet;
+    const workoutStartTimeValue = workoutStartTimeRef?.current ?? workoutStartTime;
+    const isPremiumValue = isPremiumRef.current;
+    const isEndValue = isEndRef.current;
+    
+    // Premium kontrolü
+    if (!isPremiumValue || workoutStartTimeValue === null || workoutSavedRef.current) {
+      return;
+    }
+    
+    // 5 set veya daha az setlik antrenmanlar için: Antrenman sonunda kayıt at
+    if (setCount <= WORKOUT.MIN_SETS_FOR_SAVE) {
+      // Antrenman tamamlandığında (isEnd true olduğunda) kayıt at
+      if (isEndValue) {
+        const totalDuration = Math.floor((Date.now() - workoutStartTimeValue) / 1000); // Saniye cinsinden
+        const completedSets = setCount; // Tüm setler tamamlanmış
+        
+        saveWorkout({
+          setCount,
+          setDuration,
+          restDuration,
+          totalDuration,
+          completedSets,
+        });
+        
+        workoutSavedRef.current = true; // Kayıt oluşturulduğunu işaretle
+      }
+    } else {
+      // 5 setten fazla setlik antrenmanlar için: 5 set tamamlandıktan sonra 6. sete başladığında kayıt at
+      // currentSetValue > WORKOUT.MIN_SETS_FOR_SAVE yani 6. sete geçildiğinde
+      if (currentSetValue > WORKOUT.MIN_SETS_FOR_SAVE) {
+        const totalDuration = Math.floor((Date.now() - workoutStartTimeValue) / 1000); // Saniye cinsinden
+        const completedSets = currentSetValue - 1; // Tamamlanan set sayısı (5 set tamamlanmış)
+        
+        saveWorkout({
+          setCount,
+          setDuration,
+          restDuration,
+          totalDuration,
+          completedSets,
+        });
+        
+        workoutSavedRef.current = true; // Kayıt oluşturulduğunu işaretle
+      }
+    }
+  }, [currentSet, currentSetRef, workoutStartTimeRef, isEnd, setCount, setDuration, restDuration, saveWorkout]);
+  
+  useEffect(() => {
+    // Reset kayıt durumu timer başladığında
+    if (!isEnd && isRunning) {
+      workoutSavedRef.current = false;
+    }
+  }, [isEnd, isRunning]);
+
+  // 1. Timer tamamlandığında kaydet (5 set veya daha az setlik antrenmanlar için)
+  useEffect(() => {
+    if (isEnd) {
+      saveWorkoutIfNeeded();
+    }
+  }, [isEnd, saveWorkoutIfNeeded]);
+
+  // 2. 5 setten fazla setlik antrenmanlar için: 5 set tamamlandıktan sonra 6. sete başladığında kaydet
+  useEffect(() => {
+    // Sadece 5 setten fazla setlik antrenmanlar için ve henüz kaydedilmemişse
+    if (setCount > WORKOUT.MIN_SETS_FOR_SAVE && !workoutSavedRef.current && currentSet > WORKOUT.MIN_SETS_FOR_SAVE) {
+      saveWorkoutIfNeeded();
+    }
+  }, [currentSet, setCount, saveWorkoutIfNeeded]);
+
+  // 3. Component unmount olduğunda kaydet (uygulama komple kapatıldığında)
+  // Geri tuşuna basıldığında kayıt atmayalım (isBackPressedRef kontrolü ile)
+  useEffect(() => {
+    return () => {
+      // Geri tuşuna basılmadıysa kayıt at (uygulama tamamen kapatıldığında)
+      if (!isBackPressedRef.current) {
+        saveWorkoutIfNeeded();
+      }
+    };
+  }, [saveWorkoutIfNeeded]);
 
   const handleStartTimer = useCallback(() => {
     triggerImpact(Haptics.ImpactFeedbackStyle.Medium);
@@ -74,9 +206,9 @@ export default function TimerScreen({ setCount, setDuration, restDuration, sound
   }, [nextPhase, triggerImpact]);
 
   const progressPercent = useMemo(() => {
-    const total = isWorking ? setDuration : restDuration;
+    const total = isWorking ? setDuration : currentRestDuration;
     return calculateProgress(timeLeft, total, isWorking, setDuration);
-  }, [timeLeft, isWorking, setDuration, restDuration]);
+  }, [timeLeft, isWorking, setDuration, currentRestDuration]);
 
   const showRestart = useMemo(() => currentSet > setCount, [currentSet, setCount]);
 
@@ -84,14 +216,20 @@ export default function TimerScreen({ setCount, setDuration, restDuration, sound
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView contentContainerStyle={styles.timerScrollContent}>
         <TimerHeader
-          onBack={onBack}
+          onBack={handleBack}
           isMuted={isMuted}
           onToggleMute={toggleMute}
         />
 
         <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border, shadowColor: colors.cardShadow }]}>
-          <SetInfo currentSet={currentSet} totalSets={setCount} />
-          <PhaseBadge isWorking={isWorking} />
+          <View style={styles.cardHeader}>
+            <SetInfo 
+              currentSet={currentSet} 
+              totalSets={setCount}
+              isEnd={isEnd}
+            />
+          </View>
+          <PhaseBadge isWorking={isWorking} isEnd={isEnd} />
 
           <View style={styles.timerContainer}>
             <TimerCircle
@@ -100,7 +238,8 @@ export default function TimerScreen({ setCount, setDuration, restDuration, sound
               isWorking={isWorking}
               isRunning={isRunning}
               setDuration={setDuration}
-              restDuration={restDuration}
+              restDuration={currentRestDuration}
+              isEnd={isEnd}
             />
           </View>
 
@@ -135,8 +274,12 @@ export default function TimerScreen({ setCount, setDuration, restDuration, sound
                     <TimerButton type="finishSet" onPress={handleNextPhase} />
                   )}
 
-                  {!isWorking && (
+                  {!isWorking && currentRestDuration > 0 && (
                     <TimerButton type="finishRest" onPress={handleNextPhase} />
+                  )}
+
+                  {!isWorking && currentRestDuration === 0 && (
+                    <TimerButton type="next" onPress={handleNextPhase} />
                   )}
                 </View>
               </>
@@ -150,13 +293,15 @@ export default function TimerScreen({ setCount, setDuration, restDuration, sound
           <InfoPanel
             setCount={setCount}
             setDuration={setDuration}
-            restDuration={restDuration}
+            restDuration={currentRestDuration}
           />
         </View>
       </ScrollView>
     </SafeAreaView>
   );
-}
+});
+
+export default TimerScreen;
 
 const styles = StyleSheet.create({
   container: {
@@ -179,6 +324,10 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 8,
     borderWidth: 1,
+    position: 'relative',
+  },
+  cardHeader: {
+    alignItems: 'center',
   },
   timerContainer: {
     alignItems: 'center',

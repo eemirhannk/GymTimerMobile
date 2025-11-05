@@ -5,9 +5,10 @@ import { useTheme } from '../theme/ThemeContext';
 
 type PhaseBadgeProps = {
   isWorking: boolean;
+  isEnd?: boolean;
 };
 
-function PhaseBadge({ isWorking }: PhaseBadgeProps) {
+function PhaseBadge({ isWorking, isEnd }: PhaseBadgeProps) {
   const { t } = useTranslation();
   const { colors } = useTheme();
 
@@ -23,6 +24,10 @@ function PhaseBadge({ isWorking }: PhaseBadgeProps) {
     styles.text,
     { color: isWorking ? colors.workingBadge.text : colors.restBadge.text }
   ], [isWorking, colors]);
+
+  if (isEnd) {
+    return null; // Timer bittiğinde badge gösterme
+  }
 
   return (
     <View style={styles.container}>

@@ -22,17 +22,27 @@ export const useInputValidation = ({
 }: UseInputValidationOptions) => {
   const handleChange = useCallback(
     (text: string, onChange: (value: string) => void) => {
-      // Validation yap
-      const validation = validator(text);
+      // Önce sanitize et
+      const sanitized = sanitizer(text);
       
-      // Hata varsa ve gösterilmesi gerekiyorsa toast göster
-      // Validator artık direkt i18n key döndürüyor
-      if (showErrors && !validation.valid && validation.error && text !== '') {
-        showErrorToast(validation.error);
+      // Sanitize edilmiş değeri validate et
+      const validation = validator(sanitized);
+      
+      // Eğer değer değiştiyse (sanitize edildiyse) ve hata varsa, hata göster
+      // Eğer değer değişmediyse ama hata varsa, hata göster
+      if (showErrors && !validation.valid && validation.error && sanitized !== '') {
+        // Sadece sanitize edilmiş değer hala geçersizse hata göster
+        // Eğer sanitizer değeri düzeltiyorsa (örn: 6 -> 5), hata gösterme
+        if (text !== sanitized) {
+          // Değer otomatik olarak düzeltildi, hata gösterme
+          // Sadece güncelle
+        } else {
+          // Değer değişmedi ama hala geçersiz, hata göster
+          showErrorToast(validation.error);
+        }
       }
       
-      // Sanitize et ve güncelle
-      const sanitized = sanitizer(text);
+      // Güncelle
       onChange(sanitized);
     },
     [validator, sanitizer, showErrors]

@@ -106,7 +106,6 @@ export const DEFAULT_VALUES = {
   SET_COUNT: 3,
   SET_DURATION: 0,
   REST_DURATION: 60,
-  SOUND_MODE: 'effects' as const,
 } as const;
 
 // Error key mapping
@@ -114,7 +113,59 @@ export const ERROR_KEY_MAP = {
   invalid_number: 'validationInvalidNumber',
   min_1: 'validationSetCountMin',
   max_50: 'validationSetCountMax',
+  max_5_free: 'validationSetCountMaxFree',
   min_0: 'validationDurationMin',
   max_300: 'validationDurationMax',
+  max_300_free: 'validationDurationMaxFree',
+} as const;
+
+// Premium özellikler
+export const PREMIUM = {
+  FREE_MAX_SETS: 5, // Ücretsiz kullanıcılar için maksimum set sayısı
+  FREE_MAX_DURATION: 300, // Ücretsiz kullanıcılar için maksimum süre (saniye)
+  STORAGE_KEY: '@gymtimer:premium',
+  THEME_STORAGE_KEY: '@gymtimer:premiumTheme', // Premium tema seçimi
+  THEME_MODE_STORAGE_KEY: '@gymtimer:themeMode', // Tema modu (light/dark) seçimi
+  WORKOUTS_STORAGE_KEY: '@gymtimer:workouts', // Antrenman geçmişi
+  TEMPLATES_STORAGE_KEY: '@gymtimer:templates', // Antrenman şablonları
+  PROGRAMS_STORAGE_KEY: '@gymtimer:programs', // Antrenman programları
+  SOUND_SETTINGS_STORAGE_KEY: '@gymtimer:soundSettings', // Gelişmiş ses ayarları
+  PRODUCT_IDS: {
+    LIFETIME: 'premium_lifetime', // Tek seferlik satın alma
+    MONTHLY: 'premium_monthly', // Aylık abonelik
+  },
+} as const;
+
+// Swipe gesture ayarları
+export const SWIPE = {
+  THRESHOLD: 50, // Minimum swipe mesafesi (piksel)
+  LEFT_EDGE_RATIO: 0.15, // Sol kenar eşiği (ekran genişliğinin yüzdesi)
+  RIGHT_EDGE_RATIO: 0.85, // Sağ kenar eşiği (ekran genişliğinin yüzdesi)
+  MIN_GESTURE_DX: 10, // Minimum yatay hareket mesafesi (piksel)
+} as const;
+
+// Drawer ayarları
+export const DRAWER = {
+  WIDTH_RATIO: 0.7, // Drawer genişliği (ekran genişliğinin yüzdesi)
+} as const;
+
+// Antrenman kayıt ayarları
+export const WORKOUT = {
+  MIN_SETS_FOR_SAVE: 5, // Antrenman kaydı için minimum set sayısı
+  ESTIMATED_DURATION: 60, // Süresiz süreler için tahmini süre (saniye)
+} as const;
+
+// Onboarding ayarları
+export const ONBOARDING = {
+  IMAGE_SIZE_RATIO: 0.6, // Onboarding görsel boyutu (ekran genişliğinin yüzdesi)
+  BOTTOM_BUTTON_OFFSET: 80, // Alt butonun alt kenardan uzaklığı (piksel)
+} as const;
+
+// Storage keys
+export const STORAGE_KEYS = {
+  SET_COUNT: '@gymtimer:setCount',
+  SET_DURATION: '@gymtimer:setDuration',
+  REST_DURATION: '@gymtimer:restDuration',
+  ONBOARDING_COMPLETED: '@gymtimer:onboarding_completed',
 } as const;
 

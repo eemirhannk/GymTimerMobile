@@ -5,10 +5,27 @@ import { useTheme } from '../theme/ThemeContext';
 type SetInfoProps = {
   currentSet: number;
   totalSets: number;
+  isEnd?: boolean;
 };
 
-function SetInfo({ currentSet, totalSets }: SetInfoProps) {
+function SetInfo({ currentSet, totalSets, isEnd }: SetInfoProps) {
   const { colors } = useTheme();
+  
+  // Conditional return hook'lardan sonra olmalı
+  if (isEnd) {
+    return (
+      <View style={styles.container} accessible={true} accessibilityRole="text">
+        <Text
+          accessible={true}
+          accessibilityLabel="Workout Completed"
+          accessibilityRole="text"
+          style={[styles.completedText, { color: colors.text }]}
+        >
+          🎉 Tamamlandı!
+        </Text>
+      </View>
+    );
+  }
   
   return (
     <View style={styles.container} accessible={true} accessibilityRole="text">
@@ -42,6 +59,10 @@ const styles = StyleSheet.create({
   },
   number: {
     fontSize: 48,
+    fontWeight: 'bold',
+  },
+  completedText: {
+    fontSize: 32,
     fontWeight: 'bold',
   },
 });

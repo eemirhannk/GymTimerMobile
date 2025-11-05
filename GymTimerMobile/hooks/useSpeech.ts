@@ -1,12 +1,9 @@
 import { useRef, useCallback, useState, useEffect, useMemo } from 'react';
-import * as Speech from 'expo-speech';
 import { useAudioPlayer, AudioSource } from 'expo-audio';
-import { useTranslation } from 'react-i18next';
-import i18n from 'i18next';
-import { SoundMode } from '../types';
 import { showErrorToast } from '../utils/toast';
+import { useAdvancedSoundSettings } from './useAdvancedSoundSettings';
 
-type SpeechKey = 'work' | 'rest' | 'congrats' | 'setWork';
+type SoundKey = 'work' | 'rest' | 'congrats';
 
 const SOUND_FILES = {
   work: require('../assets/sounds/work.mp3'),
@@ -14,8 +11,8 @@ const SOUND_FILES = {
   congrats: require('../assets/sounds/end.mp3'),
 };
 
-export const useSpeech = (soundMode: SoundMode = 'effects') => {
-  const { t } = useTranslation();
+export const useSpeech = () => {
+  const { settings: soundSettings } = useAdvancedSoundSettings();
   const isMutedRef = useRef(false);
   const [isMuted, setIsMuted] = useState(false);
   
@@ -32,15 +29,20 @@ export const useSpeech = (soundMode: SoundMode = 'effects') => {
   // Player ayarlarını yap
   useEffect(() => {
     workPlayer.loop = false;
-    workPlayer.volume = 1.0;
+    workPlayer.volume = 1.0; // Sabit volume
     restPlayer.loop = false;
-    restPlayer.volume = 1.0;
+    restPlayer.volume = 1.0; // Sabit volume
     congratsPlayer.loop = false;
-    congratsPlayer.volume = 1.0;
+    congratsPlayer.volume = 1.0; // Sabit volume
   }, [workPlayer, restPlayer, congratsPlayer]);
 
-  const playSoundEffect = useCallback(async (key: 'work' | 'rest' | 'congrats') => {
+  const playSoundEffect = useCallback(async (key: SoundKey) => {
     if (isMutedRef.current) return;
+    
+    // Enable/disable kontrolü
+    if (key === 'work' && !soundSettings?.workSoundEnabled) return;
+    if (key === 'rest' && !soundSettings?.restSoundEnabled) return;
+    if (key === 'congrats' && !soundSettings?.congratsSoundEnabled) return;
     
     try {
       const player = players[key];
@@ -51,63 +53,25 @@ export const useSpeech = (soundMode: SoundMode = 'effects') => {
     } catch (error) {
       showErrorToast('errorPlaySound');
     }
-  }, [players]);
+  }, [players, soundSettings]);
 
-  const speak = useCallback(async (text: string) => {
-    if (!isMutedRef.current) {
-      try {
-        await Speech.stop();
-      } catch {}
-      Speech.speak(text, {
-        language: i18n.language === 'tr' ? 'tr-TR' : 'en-US',
-        rate: 1.0,
-        pitch: 1.0,
-        volume: 1.0,
-      });
+  const speakKey = useCallback((key: 'work' | 'rest' | 'congrats' | 'setWork', n?: number) => {
+    // Sadece ses efekti modu
+    if (key === 'work' || key === 'rest' || key === 'congrats') {
+      playSoundEffect(key);
+    } else if (key === 'setWork') {
+      // setWork için work sesini çal
+      playSoundEffect('work');
     }
-  }, []);
-
-  const getText = useCallback((key: SpeechKey, n?: number): string => {
-    switch (key) {
-      case 'work':
-        return t('speak_work');
-      case 'rest':
-        return t('speak_rest');
-      case 'congrats':
-        return t('speak_congrats');
-      case 'setWork':
-        return t('speak_setWork', { n });
-    }
-  }, [t]);
-
-  const speakKey = useCallback((key: SpeechKey, n?: number) => {
-    if (soundMode === 'effects') {
-      // Ses efekti modunda
-      if (key === 'work' || key === 'rest' || key === 'congrats') {
-        playSoundEffect(key);
-      } else if (key === 'setWork') {
-        // setWork için work sesini çal
-        playSoundEffect('work');
-      }
-    } else {
-      // Speech modunda
-      const text = getText(key, n);
-      speak(text);
-    }
-  }, [soundMode, getText, speak, playSoundEffect]);
+  }, [playSoundEffect]);
 
   const toggleMute = useCallback(() => {
     isMutedRef.current = !isMutedRef.current;
     setIsMuted(isMutedRef.current);
-    if (isMutedRef.current) {
-      Speech.stop();
-    }
   }, []);
 
   return {
-    speak,
     speakKey,
-    getText,
     isMuted,
     toggleMute,
   };

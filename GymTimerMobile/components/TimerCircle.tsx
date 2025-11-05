@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useRef } from 'react';
+import React, { useMemo, useEffect, useRef, memo } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { CIRCLE_SIZE, PROGRESS_THRESHOLDS, PROGRESS_COLORS, ANIMATION_DURATION, ANIMATION_CONFIG, CIRCLE_CONFIG } from '../utils/constants';
@@ -15,15 +15,17 @@ type TimerCircleProps = {
   isRunning: boolean;
   setDuration: number;
   restDuration: number;
+  isEnd?: boolean;
 };
 
-function TimerCircle({
+const TimerCircle = memo(function TimerCircle({
   timeLeft,
   progress,
   isWorking,
   isRunning,
   setDuration,
   restDuration,
+  isEnd,
 }: TimerCircleProps) {
   const { t } = useTranslation();
   const { colors } = useTheme();
@@ -109,12 +111,32 @@ function TimerCircle({
   }, [isRunning, progress, strokeColor, colors.text]);
 
   const displayText = useMemo(() => {
-    return setDuration === 0 && isWorking ? '--:--' : formattedTime;
-  }, [setDuration, isWorking, formattedTime]);
+    // Timer bittiğinde tamamlandı mesajı
+    if (isEnd) {
+      return '🎉';
+    }
+    // Work fazında süresiz kontrolü
+    if (setDuration === 0 && isWorking) {
+      return '--:--';
+    }
+    // Rest fazında süresiz kontrolü
+    if (restDuration === 0 && !isWorking) {
+      return '--:--';
+    }
+    return formattedTime;
+  }, [isEnd, setDuration, restDuration, isWorking, formattedTime]);
 
   const showTimeless = useMemo(() => {
-    return setDuration === 0 && isWorking && isRunning;
-  }, [setDuration, isWorking, isRunning]);
+    // Work fazında süresiz kontrolü
+    if (setDuration === 0 && isWorking && isRunning) {
+      return true;
+    }
+    // Rest fazında süresiz kontrolü
+    if (restDuration === 0 && !isWorking && isRunning) {
+      return true;
+    }
+    return false;
+  }, [setDuration, restDuration, isWorking, isRunning]);
 
   return (
     <View style={styles.circleContainer}>
@@ -152,9 +174,9 @@ function TimerCircle({
       </View>
     </View>
   );
-}
+});
 
-export default React.memo(TimerCircle);
+export default TimerCircle;
 
 const styles = StyleSheet.create({
   circleContainer: {

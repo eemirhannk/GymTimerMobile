@@ -1,6 +1,12 @@
 import { useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
 
+type TemplateSequenceItem = {
+  setCount: number;
+  setDuration: number;
+  restDuration: number;
+};
+
 type UseAppStateSyncParams = {
   isRunning: boolean;
   isPaused: boolean;
@@ -11,6 +17,8 @@ type UseAppStateSyncParams = {
   setCount: number;
   setDuration: number;
   restDuration: number;
+  templateSequence?: TemplateSequenceItem[];
+  getRestDurationForSet?: (setNumber: number) => number;
   setTimeLeft: (value: number) => void;
   setIsWorking: (value: boolean) => void;
   setCurrentSet: (value: number) => void;
@@ -37,6 +45,8 @@ export const useAppStateSync = ({
   setCount,
   setDuration,
   restDuration,
+  templateSequence,
+  getRestDurationForSet,
   setTimeLeft,
   setIsWorking,
   setCurrentSet,
@@ -81,9 +91,19 @@ export const useAppStateSync = ({
         let currentIsWorking = snapshot.isWorking;
         let currentSet = snapshot.currentSet;
 
+        // Rest duration'ı belirle (template sequence varsa)
+        let currentRestDuration = restDuration;
+        if (templateSequence && templateSequence.length > 0 && getRestDurationForSet) {
+          currentRestDuration = getRestDurationForSet(currentSet);
+        }
+
         // Geçen süreyi uygula: fazlar arası geçişleri de hesaba kat
         while (delta > 0 && !isEnd) {
-          const totalCurrent = currentIsWorking ? (setDuration || 0) : restDuration;
+          // Rest duration'ı güncelle (template sequence varsa)
+          if (!currentIsWorking && templateSequence && templateSequence.length > 0 && getRestDurationForSet) {
+            currentRestDuration = getRestDurationForSet(currentSet);
+          }
+          const totalCurrent = currentIsWorking ? (setDuration || 0) : currentRestDuration;
           
           // Süresiz çalışma ise sadece dinlenmede telafi uygularız
           if (currentIsWorking && setDuration === 0) {
@@ -107,7 +127,11 @@ export const useAppStateSync = ({
               if (currentSet < setCount) {
                 // Dinlenme fazına geç
                 currentIsWorking = false;
-                currentTimeLeft = restDuration;
+                // Rest duration'ı güncelle (template sequence varsa)
+                if (templateSequence && templateSequence.length > 0 && getRestDurationForSet) {
+                  currentRestDuration = getRestDurationForSet(currentSet);
+                }
+                currentTimeLeft = currentRestDuration;
               } else {
                 // Son set bitti, antrenman tamamlandı
                 setIsRunning(false);
@@ -119,6 +143,11 @@ export const useAppStateSync = ({
               currentSet += 1;
               currentIsWorking = true;
               currentTimeLeft = setDuration;
+              
+              // Rest duration'ı güncelle (template sequence varsa) - bir sonraki rest için
+              if (templateSequence && templateSequence.length > 0 && getRestDurationForSet) {
+                currentRestDuration = getRestDurationForSet(currentSet);
+              }
               
               if (setDuration === 0) {
                 // Süresiz çalışma fazına gelindiyse daha fazla otomatik akış yok
@@ -146,6 +175,6 @@ export const useAppStateSync = ({
     return () => {
       sub.remove();
     };
-  }, [isPaused, isEnd, restDuration, setDuration, setCount, isRunning, timeLeftRef, isWorkingRef, currentSetRef, setTimeLeft, setIsWorking, setCurrentSet, setIsRunning, setIsEnd, startInterval, clearInterval]);
+  }, [isPaused, isEnd, restDuration, setDuration, setCount, isRunning, timeLeftRef, isWorkingRef, currentSetRef, setTimeLeft, setIsWorking, setCurrentSet, setIsRunning, setIsEnd, startInterval, clearInterval, getRestDurationForSet]);
 };
 

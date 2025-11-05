@@ -1,10 +1,19 @@
-export type SoundMode = 'effects' | 'speech';
+export * from './workout';
+export * from './template';
+export * from './program';
+export * from './sound';
+
+export type TemplateSequenceItem = {
+  setCount: number;
+  setDuration: number;
+  restDuration: number;
+};
 
 export type TimerScreenProps = {
   setCount: number;
   setDuration: number;
   restDuration: number;
-  soundMode: SoundMode;
+  templateSequence?: TemplateSequenceItem[]; // Şablon dizisi (program için)
   onBack: () => void;
 };
 

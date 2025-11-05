@@ -26,12 +26,14 @@ function InfoPanel({
       <View style={styles.item}>
         <Text style={[styles.label, { color: colors.textSecondary }]}>{t('workLabel')}</Text>
         <Text style={[styles.value, { color: colors.text }]}>
-          {setDuration === 0 ? t('timeless') : `${setDuration}s`}
+          {setDuration === 0 ? '--:--' : `${setDuration}s`}
         </Text>
       </View>
       <View style={styles.item}>
         <Text style={[styles.label, { color: colors.textSecondary }]}>{t('restLabel')}</Text>
-        <Text style={[styles.value, { color: colors.text }]}>{restDuration}s</Text>
+        <Text style={[styles.value, { color: colors.text }]}>
+          {restDuration === 0 ? '--:--' : `${restDuration}s`}
+        </Text>
       </View>
     </View>
   );
