@@ -17,7 +17,7 @@ type PremiumStatus = {
 
 export const usePremium = () => {
   // Development için premium test modu (test için true yapın)
-  const TEST_PREMIUM = false; // Test için false yapın (free versiyon testi için)
+  const TEST_PREMIUM = true; // Test için true yapın
   
   const [isPremiumStored, setIsPremiumStored] = usePersistedState<boolean>({
     key: PREMIUM.STORAGE_KEY,

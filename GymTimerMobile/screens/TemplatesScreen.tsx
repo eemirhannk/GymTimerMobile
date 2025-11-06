@@ -10,6 +10,7 @@ import {
   TextInput,
   ActivityIndicator,
 } from 'react-native';
+import AlertModal from '../components/AlertModal';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../theme/ThemeContext';
@@ -47,6 +48,11 @@ export default function TemplatesScreen({
   const [formSetCount, setFormSetCount] = useState('');
   const [formSetDuration, setFormSetDuration] = useState('');
   const [formRestDuration, setFormRestDuration] = useState('');
+  
+  // Alert modal state
+  const [showAlertModal, setShowAlertModal] = useState(false);
+  const [alertTitle, setAlertTitle] = useState('');
+  const [alertMessage, setAlertMessage] = useState('');
 
   // Form'u temizle
   const resetForm = () => {
@@ -131,11 +137,9 @@ export default function TemplatesScreen({
   const handleDelete = (template: WorkoutTemplate) => {
     // Zorunlu modda ve minimum sayıya ulaşıldıysa silmeyi engelle
     if (isRequiredMode && templates.length <= minRequiredCount) {
-      Alert.alert(
-        t('premiumOnboardingCannotExit'),
-        t('premiumOnboardingTemplateRequired'),
-        [{ text: t('ok'), style: 'default' }]
-      );
+      setAlertTitle(t('premiumOnboardingCannotExit'));
+      setAlertMessage(t('premiumOnboardingTemplateRequired'));
+      setShowAlertModal(true);
       return;
     }
 
@@ -175,11 +179,9 @@ export default function TemplatesScreen({
   // Geri çıkış kontrolü (zorunlu modda)
   const handleBack = () => {
     if (isRequiredMode && templates.length < minRequiredCount) {
-      Alert.alert(
-        t('premiumOnboardingCannotExit'),
-        t('premiumOnboardingTemplateRequired'),
-        [{ text: t('ok'), style: 'default' }]
-      );
+      setAlertTitle(t('premiumOnboardingCannotExit'));
+      setAlertMessage(t('premiumOnboardingTemplateRequired'));
+      setShowAlertModal(true);
       return;
     }
     onBack();
@@ -407,6 +409,12 @@ export default function TemplatesScreen({
           ))
         )}
       </ScrollView>
+      <AlertModal
+        visible={showAlertModal}
+        title={alertTitle}
+        message={alertMessage}
+        onClose={() => setShowAlertModal(false)}
+      />
     </SafeAreaView>
   );
 }
