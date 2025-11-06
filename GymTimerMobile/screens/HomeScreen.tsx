@@ -19,8 +19,9 @@ import { useTheme } from '../theme/ThemeContext';
 import { useInputValidation } from '../hooks/useInputValidation';
 import { DEFAULT_VALUES, PREMIUM, SWIPE } from '../utils/constants';
 import { usePremium } from '../hooks/usePremium';
-import { showErrorToast, showPremiumToast } from '../utils/toast';
-import gymTimerIcon from '../assets/gymTimerIcon.jpeg';
+import { showErrorToast } from '../utils/toast';
+import PremiumRestrictionModal from '../components/PremiumRestrictionModal';
+import mainIcon from '../assets/mainIcon.png';
 
 
 type HomeScreenProps = {
@@ -56,6 +57,10 @@ export default function HomeScreen({
   const [rawSetCount, setRawSetCount] = useState(setCount);
   const [rawSetDuration, setRawSetDuration] = useState(setDuration);
   const [rawRestDuration, setRawRestDuration] = useState(restDuration);
+  
+  // Premium restriction modal state
+  const [showPremiumModal, setShowPremiumModal] = useState(false);
+  const [premiumModalMessageKey, setPremiumModalMessageKey] = useState<string>('premiumSetLimitReached');
   
   // Swipe gesture için
   const swipeStartX = useRef<number | null>(null);
@@ -115,13 +120,14 @@ export default function HomeScreen({
       // Premium limit kontrolü - sadece free kullanıcılar için
       const numValue = parseInt(text, 10);
       if (!isPremium && text && !isNaN(numValue) && numValue > PREMIUM.FREE_MAX_SETS) {
-        // Toast göster
-        showPremiumToast('premiumSetLimitReached', onOpenPurchase, 5000);
+        // Modal göster
+        setPremiumModalMessageKey('premiumSetLimitReached');
+        setShowPremiumModal(true);
       }
       // Sanitize edip state'e kaydet
       setCountValidation.handleChange(text, onSetCountChange);
     },
-    [setCountValidation, onSetCountChange, isPremium, onOpenPurchase]
+    [setCountValidation, onSetCountChange, isPremium]
   );
   
   // setCount prop olarak ilk kez geldiğinde rawSetCount'u güncelle
@@ -160,13 +166,14 @@ export default function HomeScreen({
       // Premium limit kontrolü
       const numValue = parseInt(text, 10);
       if (!isPremium && text && !isNaN(numValue) && numValue > PREMIUM.FREE_MAX_DURATION) {
-        // Toast göster
-        showPremiumToast('premiumDurationLimitReached', onOpenPurchase, 5000);
+        // Modal göster
+        setPremiumModalMessageKey('premiumDurationLimitReached');
+        setShowPremiumModal(true);
       }
       // Sanitize edip state'e kaydet
       setDurationValidation.handleChange(text, onSetDurationChange);
     },
-    [setDurationValidation, onSetDurationChange, isPremium, onOpenPurchase]
+    [setDurationValidation, onSetDurationChange, isPremium]
   );
 
   const handleRestDurationChange = useCallback(
@@ -176,25 +183,26 @@ export default function HomeScreen({
       // Premium limit kontrolü
       const numValue = parseInt(text, 10);
       if (!isPremium && text && !isNaN(numValue) && numValue > PREMIUM.FREE_MAX_DURATION) {
-        // Toast göster
-        showPremiumToast('premiumDurationLimitReached', onOpenPurchase, 5000);
+        // Modal göster
+        setPremiumModalMessageKey('premiumDurationLimitReached');
+        setShowPremiumModal(true);
       }
       // Sanitize edip state'e kaydet
       restDurationValidation.handleChange(text, onRestDurationChange);
     },
-    [restDurationValidation, onRestDurationChange, isPremium, onOpenPurchase]
+    [restDurationValidation, onRestDurationChange, isPremium]
   );
 
   const handleStart = useCallback(() => {
     // Premium kontrolü: Set sayısı limitini kontrol et
     const setCountNum = parseInt(setCount, 10) || DEFAULT_VALUES.SET_COUNT;
     if (!isPremium && setCountNum > PREMIUM.FREE_MAX_SETS) {
-      showErrorToast('premiumSetLimitReached');
-      onOpenPurchase();
+      setPremiumModalMessageKey('premiumSetLimitReached');
+      setShowPremiumModal(true);
       return;
     }
     onStart();
-  }, [setCount, isPremium, onStart, onOpenPurchase]);
+  }, [setCount, isPremium, onStart]);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} {...panResponder.panHandlers}>
@@ -241,7 +249,7 @@ export default function HomeScreen({
         >
           <View style={styles.headerContainer}>
             <Image 
-              source={gymTimerIcon} 
+              source={mainIcon} 
               style={styles.logo}
               resizeMode="contain"
               accessible={true}
@@ -385,6 +393,17 @@ export default function HomeScreen({
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+      <PremiumRestrictionModal
+        visible={showPremiumModal}
+        messageKey={premiumModalMessageKey}
+        onUpgrade={() => {
+          setShowPremiumModal(false);
+          onOpenPurchase();
+        }}
+        onCancel={() => {
+          setShowPremiumModal(false);
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -398,7 +417,7 @@ const styles = StyleSheet.create({
   },
   hamburgerIcon: {
     width: 20,
-    height: 16,
+    height: 20,
     justifyContent: 'space-between',
   },
   hamburgerLine: {
@@ -408,22 +427,19 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: 'center',
     gap: 24,
     paddingHorizontal: 16,
+    paddingTop: 48,
   },
   headerContainer: {
     alignItems: 'center',
-    marginBottom: 24,
-    gap: 16,
   },
   logo: {
-    width: 120,
-    height: 120,
-    borderRadius: 24,
+    width: 150,
+    height: 150,
   },
   title: {
-    fontSize: 32,
+    fontSize: 36,
     fontWeight: 'bold',
     textAlign: 'center',
     fontStyle: 'italic',

@@ -12,7 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../theme/ThemeContext';
 import { ONBOARDING } from '../utils/constants';
-import gymTimerIcon from '../assets/gymTimerIcon.jpeg';
+import mainIcon from '../assets/mainIcon.png';
 
 const { width, height } = Dimensions.get('window');
 
@@ -37,19 +37,19 @@ export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) 
       key: '1',
       title: t('onboarding.slide1.title'),
       text: t('onboarding.slide1.text'),
-      image: gymTimerIcon,
+      image: mainIcon,
     },
     {
       key: '2',
       title: t('onboarding.slide2.title'),
       text: t('onboarding.slide2.text'),
-      image: gymTimerIcon,
+      image: mainIcon,
     },
     {
       key: '3',
       title: t('onboarding.slide3.title'),
       text: t('onboarding.slide3.text'),
-      image: gymTimerIcon,
+      image: mainIcon,
     },
   ];
 

@@ -23,7 +23,7 @@ type FAQItem = {
 export default function HelpCenterScreen({ onBack }: HelpCenterScreenProps) {
   const { t } = useTranslation();
   const { colors } = useTheme();
-  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+  const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
 
   const faqs: FAQItem[] = [
     {
@@ -72,11 +72,6 @@ export default function HelpCenterScreen({ onBack }: HelpCenterScreenProps) {
       category: 'premium',
     },
     {
-      question: t('help.faq10.question'),
-      answer: t('help.faq10.answer'),
-      category: 'premium',
-    },
-    {
       question: t('help.faq11.question'),
       answer: t('help.faq11.answer'),
       category: 'premium',
@@ -111,31 +106,11 @@ export default function HelpCenterScreen({ onBack }: HelpCenterScreenProps) {
       answer: t('help.faq17.answer'),
       category: 'timer',
     },
-    {
-      question: t('help.faq18.question'),
-      answer: t('help.faq18.answer'),
-      category: 'general',
-    },
-    {
-      question: t('help.faq19.question'),
-      answer: t('help.faq19.answer'),
-      category: 'general',
-    },
-    {
-      question: t('help.faq20.question'),
-      answer: t('help.faq20.answer'),
-      category: 'premium',
-    },
   ];
 
   const toggleExpand = (index: number) => {
-    const newExpanded = new Set(expandedItems);
-    if (newExpanded.has(index.toString())) {
-      newExpanded.delete(index.toString());
-    } else {
-      newExpanded.add(index.toString());
-    }
-    setExpandedItems(newExpanded);
+    // Eğer tıklanan FAQ zaten açıksa kapat, değilse aç (diğerlerini kapat)
+    setExpandedIndex(expandedIndex === index ? null : index);
   };
 
   const openEmail = () => {
@@ -180,10 +155,10 @@ export default function HelpCenterScreen({ onBack }: HelpCenterScreenProps) {
                   {faq.question}
                 </Text>
                 <Text style={[styles.faqIcon, { color: colors.primary }]}>
-                  {expandedItems.has(index.toString()) ? '−' : '+'}
+                  {expandedIndex === index ? '−' : '+'}
                 </Text>
               </TouchableOpacity>
-              {expandedItems.has(index.toString()) && (
+              {expandedIndex === index && (
                 <View style={styles.faqAnswer}>
                   <Text style={[styles.faqAnswerText, { color: colors.textSecondary }]}>
                     {faq.answer}

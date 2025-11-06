@@ -99,6 +99,67 @@ const TimerScreen = memo(function TimerScreen({ setCount, setDuration, restDurat
     isEndRef.current = isEnd;
   }, [isEnd]);
 
+  // TemplateSequence için rest duration hesapla (ağırlıklı ortalama)
+  const calculateAverageRestDuration = useCallback((): number => {
+    if (!templateSequence || templateSequence.length === 0) {
+      return restDuration;
+    }
+    
+    // Ağırlıklı ortalama hesapla: her template'in rest duration'ı set sayısıyla çarpılıp toplanır, sonra toplam set sayısına bölünür
+    let totalRestDuration = 0;
+    let totalSets = 0;
+    
+    templateSequence.forEach((template) => {
+      totalRestDuration += template.restDuration * template.setCount;
+      totalSets += template.setCount;
+    });
+    
+    // Eğer hiç set yoksa varsayılan rest duration'ı döndür
+    if (totalSets === 0) {
+      return restDuration;
+    }
+    
+    return Math.round(totalRestDuration / totalSets);
+  }, [templateSequence, restDuration]);
+
+  // Toplam süreyi hesapla (set süresi sınırsızsa 60 sn varsay, dinlenme sürelerini templateSequence'den hesapla)
+  const calculateTotalDuration = useCallback((): number => {
+    // Set süresi sınırsızsa (0) 60 sn varsay
+    const effectiveSetDuration = setDuration === 0 ? WORKOUT.ESTIMATED_DURATION : setDuration;
+    
+    // Toplam çalışma süresi
+    const totalWorkDuration = setCount * effectiveSetDuration;
+    
+    // Toplam dinlenme süresi
+    let totalRestDuration = 0;
+    
+    if (templateSequence && templateSequence.length > 0) {
+      // TemplateSequence varsa, her template için dinlenme sürelerini hesapla
+      templateSequence.forEach((template, index) => {
+        // Her template için: (set sayısı - 1) dinlenme aralığı var
+        const restCount = template.setCount - 1;
+        // Template'in rest duration'ı sınırsızsa (0) 60 sn varsay
+        const effectiveRestDuration = template.restDuration === 0 ? WORKOUT.ESTIMATED_DURATION : template.restDuration;
+        totalRestDuration += restCount * effectiveRestDuration;
+        
+        // Template'ler arası geçişte de bir dinlenme var (son template hariç)
+        // Bir önceki template'in rest duration'ını kullan (mantıklı çünkü son setin dinlenmesi)
+        if (index > 0 && index < templateSequence.length) {
+          const previousTemplate = templateSequence[index - 1];
+          const previousRestDuration = previousTemplate.restDuration === 0 ? WORKOUT.ESTIMATED_DURATION : previousTemplate.restDuration;
+          totalRestDuration += previousRestDuration;
+        }
+      });
+    } else {
+      // TemplateSequence yoksa, normal rest duration kullan
+      const effectiveRestDuration = restDuration === 0 ? WORKOUT.ESTIMATED_DURATION : restDuration;
+      // (set sayısı - 1) dinlenme aralığı var
+      totalRestDuration = (setCount - 1) * effectiveRestDuration;
+    }
+    
+    return totalWorkDuration + totalRestDuration;
+  }, [setCount, setDuration, restDuration, templateSequence]);
+
   // Ortak kayıt fonksiyonu:
   // - 5 set veya daha az setlik antrenmanlar için: Antrenman sonunda (tamamlandığında) kayıt at
   // - 5 setten fazla setlik antrenmanlar için: 5 set tamamlandıktan sonra 6. sete başladığında kayıt at
@@ -111,46 +172,68 @@ const TimerScreen = memo(function TimerScreen({ setCount, setDuration, restDurat
     const isEndValue = isEndRef.current;
     
     // Premium kontrolü
-    if (!isPremiumValue || workoutStartTimeValue === null || workoutSavedRef.current) {
+    if (!isPremiumValue || workoutStartTimeValue === null) {
       return;
     }
     
-    // 5 set veya daha az setlik antrenmanlar için: Antrenman sonunda kayıt at
-    if (setCount <= WORKOUT.MIN_SETS_FOR_SAVE) {
-      // Antrenman tamamlandığında (isEnd true olduğunda) kayıt at
-      if (isEndValue) {
-        const totalDuration = Math.floor((Date.now() - workoutStartTimeValue) / 1000); // Saniye cinsinden
-        const completedSets = setCount; // Tüm setler tamamlanmış
-        
-        saveWorkout({
-          setCount,
-          setDuration,
-          restDuration,
-          totalDuration,
-          completedSets,
-        });
-        
-        workoutSavedRef.current = true; // Kayıt oluşturulduğunu işaretle
+    // TemplateSequence için rest duration hesapla
+    const calculatedRestDuration = calculateAverageRestDuration();
+    
+    // Antrenman tamamlandığında kayıt at (workoutSavedRef kontrolünü bypass et)
+    if (isEndValue) {
+      // Hesaplanan toplam süreyi kullan (set süreleri + dinlenme süreleri)
+      const totalDuration = calculateTotalDuration();
+      const completedSets = setCount; // Tüm setler tamamlanmış
+      
+      saveWorkout({
+        setCount,
+        setDuration,
+        restDuration: calculatedRestDuration,
+        totalDuration,
+        completedSets,
+      });
+      
+      workoutSavedRef.current = true; // Kayıt oluşturulduğunu işaretle
+    } else if (setCount > WORKOUT.MIN_SETS_FOR_SAVE && currentSetValue > WORKOUT.MIN_SETS_FOR_SAVE && !workoutSavedRef.current) {
+      // 5 setten fazla setlik antrenmanlar için: 5 set tamamlandıktan sonra 6. sete başladığında kayıt at (5 set olarak)
+      // Bu kayıt ara kayıt olarak kullanılabilir, ama kullanıcı tüm antrenmanı bitirdiğinde asıl kayıt atılacak
+      // 5 set için hesaplanan süreyi kullan
+      const effectiveSetDuration = setDuration === 0 ? WORKOUT.ESTIMATED_DURATION : setDuration;
+      const totalWorkDuration = WORKOUT.MIN_SETS_FOR_SAVE * effectiveSetDuration;
+      
+      let totalRestDuration = 0;
+      if (templateSequence && templateSequence.length > 0) {
+        // TemplateSequence varsa, 5 set için dinlenme sürelerini hesapla
+        let remainingSets = WORKOUT.MIN_SETS_FOR_SAVE;
+        for (const template of templateSequence) {
+          if (remainingSets <= 0) break;
+          
+          const setsInThisTemplate = Math.min(remainingSets, template.setCount);
+          const restCount = setsInThisTemplate - 1;
+          const effectiveRestDuration = template.restDuration === 0 ? WORKOUT.ESTIMATED_DURATION : template.restDuration;
+          totalRestDuration += restCount * effectiveRestDuration;
+          
+          remainingSets -= setsInThisTemplate;
+        }
+      } else {
+        const effectiveRestDuration = restDuration === 0 ? WORKOUT.ESTIMATED_DURATION : restDuration;
+        totalRestDuration = (WORKOUT.MIN_SETS_FOR_SAVE - 1) * effectiveRestDuration;
       }
-    } else {
-      // 5 setten fazla setlik antrenmanlar için: 5 set tamamlandıktan sonra 6. sete başladığında kayıt at
-      // currentSetValue > WORKOUT.MIN_SETS_FOR_SAVE yani 6. sete geçildiğinde
-      if (currentSetValue > WORKOUT.MIN_SETS_FOR_SAVE) {
-        const totalDuration = Math.floor((Date.now() - workoutStartTimeValue) / 1000); // Saniye cinsinden
-        const completedSets = currentSetValue - 1; // Tamamlanan set sayısı (5 set tamamlanmış)
-        
-        saveWorkout({
-          setCount,
-          setDuration,
-          restDuration,
-          totalDuration,
-          completedSets,
-        });
-        
-        workoutSavedRef.current = true; // Kayıt oluşturulduğunu işaretle
-      }
+      
+      const totalDuration = totalWorkDuration + totalRestDuration;
+      const completedSets = WORKOUT.MIN_SETS_FOR_SAVE; // 5 set tamamlanmış
+      
+      saveWorkout({
+        setCount,
+        setDuration,
+        restDuration: calculatedRestDuration,
+        totalDuration,
+        completedSets,
+      });
+      
+      workoutSavedRef.current = true; // Kayıt oluşturulduğunu işaretle
     }
-  }, [currentSet, currentSetRef, workoutStartTimeRef, isEnd, setCount, setDuration, restDuration, saveWorkout]);
+  }, [currentSet, currentSetRef, workoutStartTimeRef, isEnd, setCount, setDuration, restDuration, saveWorkout, templateSequence, calculateAverageRestDuration, calculateTotalDuration]);
   
   useEffect(() => {
     // Reset kayıt durumu timer başladığında
@@ -159,7 +242,7 @@ const TimerScreen = memo(function TimerScreen({ setCount, setDuration, restDurat
     }
   }, [isEnd, isRunning]);
 
-  // 1. Timer tamamlandığında kaydet (5 set veya daha az setlik antrenmanlar için)
+  // 1. Timer tamamlandığında kaydet
   useEffect(() => {
     if (isEnd) {
       saveWorkoutIfNeeded();

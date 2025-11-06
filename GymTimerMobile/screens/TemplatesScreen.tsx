@@ -22,11 +22,20 @@ import { showSuccessToast } from '../utils/toast';
 type TemplatesScreenProps = {
   onBack: () => void;
   onUseTemplate: (template: WorkoutTemplate) => void;
+  isRequiredMode?: boolean; // Zorunlu mod (minimum 2 şablon)
+  onComplete?: () => void; // Zorunlu mod tamamlandığında çağrılacak callback
+  minRequiredCount?: number; // Minimum gerekli şablon sayısı
 };
 
 type TemplateFormMode = 'create' | 'edit';
 
-export default function TemplatesScreen({ onBack, onUseTemplate }: TemplatesScreenProps) {
+export default function TemplatesScreen({ 
+  onBack, 
+  onUseTemplate, 
+  isRequiredMode = false,
+  onComplete,
+  minRequiredCount = 2,
+}: TemplatesScreenProps) {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const { isPremium } = usePremium();
@@ -120,6 +129,16 @@ export default function TemplatesScreen({ onBack, onUseTemplate }: TemplatesScre
 
   // Şablon sil
   const handleDelete = (template: WorkoutTemplate) => {
+    // Zorunlu modda ve minimum sayıya ulaşıldıysa silmeyi engelle
+    if (isRequiredMode && templates.length <= minRequiredCount) {
+      Alert.alert(
+        t('premiumOnboardingCannotExit'),
+        t('premiumOnboardingTemplateRequired'),
+        [{ text: t('ok'), style: 'default' }]
+      );
+      return;
+    }
+
     Alert.alert(
       t('templateDelete'),
       t('templateDeleteConfirm'),
@@ -148,15 +167,41 @@ export default function TemplatesScreen({ onBack, onUseTemplate }: TemplatesScre
   // Şablonu kullan
   const handleUse = (template: WorkoutTemplate) => {
     onUseTemplate(template);
+    if (!isRequiredMode) {
+      onBack();
+    }
+  };
+
+  // Geri çıkış kontrolü (zorunlu modda)
+  const handleBack = () => {
+    if (isRequiredMode && templates.length < minRequiredCount) {
+      Alert.alert(
+        t('premiumOnboardingCannotExit'),
+        t('premiumOnboardingTemplateRequired'),
+        [{ text: t('ok'), style: 'default' }]
+      );
+      return;
+    }
     onBack();
   };
+
+  // Şablon kaydedildikten sonra kontrol et
+  useEffect(() => {
+    if (isRequiredMode && onComplete && templates.length >= minRequiredCount) {
+      // Kısa bir gecikme ile callback'i çağır (state güncellemesi için)
+      const timer = setTimeout(() => {
+        onComplete();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [templates.length, isRequiredMode, minRequiredCount, onComplete]);
 
   // Premium kontrolü
   if (!isPremium) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <TouchableOpacity onPress={onBack} style={styles.backButton}>
+          <TouchableOpacity onPress={handleBack} style={styles.backButton}>
             <Text style={[styles.backButtonText, { color: colors.text }]}>←</Text>
           </TouchableOpacity>
           <Text style={[styles.headerTitle, { color: colors.text }]}>
@@ -260,7 +305,7 @@ export default function TemplatesScreen({ onBack, onUseTemplate }: TemplatesScre
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
+        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
           <Text style={[styles.backButtonText, { color: colors.text }]}>←</Text>
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.text }]}>
@@ -270,6 +315,15 @@ export default function TemplatesScreen({ onBack, onUseTemplate }: TemplatesScre
           <Text style={[styles.addButtonText, { color: colors.primary }]}>+</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Zorunlu mod bilgilendirmesi */}
+      {isRequiredMode && (
+        <View style={[styles.requiredModeBanner, { backgroundColor: colors.primary + '20', borderColor: colors.primary }]}>
+          <Text style={[styles.requiredModeText, { color: colors.text }]}>
+            {t('premiumOnboardingTemplateRequired')} ({templates.length}/{minRequiredCount})
+          </Text>
+        </View>
+      )}
 
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
         {isLoading ? (
@@ -535,6 +589,17 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 4,
     fontWeight: '500',
+  },
+  requiredModeBanner: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    alignItems: 'center',
+  },
+  requiredModeText: {
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
   },
   premiumRequired: {
     flex: 1,

@@ -4,7 +4,7 @@
     "slug": "gym-timer-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/gymTimerIcon.jpeg",
+    "icon": "./assets/mainIcon.png",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "owner": "your-expo-username",
@@ -25,7 +25,7 @@
       "spor uygulaması"
     ],
     "splash": {
-      "image": "./assets/gymTimerIcon.jpeg",
+      "image": "./assets/mainIcon.png",
       "resizeMode": "contain",
       "backgroundColor": "#F3F4F6"
     },
@@ -45,18 +45,23 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/gymTimerIcon.jpeg",
+        "foregroundImage": "./assets/mainIcon.png",
         "backgroundColor": "#F3F4F6"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "com.gymtimer.mobile",
       "permissions": [],
+      "blockedPermissions": [
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_BACKGROUND_LOCATION"
+      ],
       "versionCode": 1,
       "playStoreUrl": "https://play.google.com/store/apps/details?id=com.gymtimer.mobile"
     },
     "web": {
-      "favicon": "./assets/gymTimerIcon.jpeg"
+      "favicon": "./assets/mainIcon.png"
     },
     "extra": {
       "eas": {

@@ -10,7 +10,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import * as InAppPurchases from 'expo-in-app-purchases';
+// @ts-ignore - Temporary mock for Android build compatibility
+import * as InAppPurchases from '../utils/mock-in-app-purchases';
 import { useTheme } from '../theme/ThemeContext';
 import { usePremium } from '../hooks/usePremium';
 import { PREMIUM } from '../utils/constants';

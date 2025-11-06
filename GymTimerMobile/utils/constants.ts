@@ -134,6 +134,7 @@ export const PREMIUM = {
     LIFETIME: 'premium_lifetime', // Tek seferlik satın alma
     MONTHLY: 'premium_monthly', // Aylık abonelik
   },
+  ONBOARDING_COMPLETED_KEY: '@gymtimer:premiumOnboardingCompleted', // Premium onboarding tamamlandı mı?
 } as const;
 
 // Swipe gesture ayarları

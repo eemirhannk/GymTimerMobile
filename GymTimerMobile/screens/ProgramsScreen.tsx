@@ -22,11 +22,20 @@ import { showSuccessToast } from '../utils/toast';
 type ProgramsScreenProps = {
   onBack: () => void;
   onUseProgram: (templates: WorkoutTemplate[]) => void;
+  isRequiredMode?: boolean; // Zorunlu mod (minimum 1 program)
+  onComplete?: () => void; // Zorunlu mod tamamlandığında çağrılacak callback
+  minRequiredCount?: number; // Minimum gerekli program sayısı
 };
 
 type ProgramFormMode = 'create' | 'edit';
 
-export default function ProgramsScreen({ onBack, onUseProgram }: ProgramsScreenProps) {
+export default function ProgramsScreen({ 
+  onBack, 
+  onUseProgram, 
+  isRequiredMode = false,
+  onComplete,
+  minRequiredCount = 1,
+}: ProgramsScreenProps) {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const { isPremium } = usePremium();
@@ -109,6 +118,16 @@ export default function ProgramsScreen({ onBack, onUseProgram }: ProgramsScreenP
 
   // Program sil
   const handleDelete = (program: WorkoutProgram) => {
+    // Zorunlu modda ve minimum sayıya ulaşıldıysa silmeyi engelle
+    if (isRequiredMode && programs.length <= minRequiredCount) {
+      Alert.alert(
+        t('premiumOnboardingCannotExit'),
+        t('premiumOnboardingProgramRequired'),
+        [{ text: t('ok'), style: 'default' }]
+      );
+      return;
+    }
+
     Alert.alert(
       t('programDelete'),
       t('programDeleteConfirm'),
@@ -149,12 +168,36 @@ export default function ProgramsScreen({ onBack, onUseProgram }: ProgramsScreenP
     }
   };
 
+  // Geri çıkış kontrolü (zorunlu modda)
+  const handleBack = () => {
+    if (isRequiredMode && programs.length < minRequiredCount) {
+      Alert.alert(
+        t('premiumOnboardingCannotExit'),
+        t('premiumOnboardingProgramRequired'),
+        [{ text: t('ok'), style: 'default' }]
+      );
+      return;
+    }
+    onBack();
+  };
+
+  // Program kaydedildikten sonra kontrol et
+  useEffect(() => {
+    if (isRequiredMode && onComplete && programs.length >= minRequiredCount) {
+      // Kısa bir gecikme ile callback'i çağır (state güncellemesi için)
+      const timer = setTimeout(() => {
+        onComplete();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [programs.length, isRequiredMode, minRequiredCount, onComplete]);
+
   // Premium kontrolü
   if (!isPremium) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <TouchableOpacity onPress={onBack} style={styles.backButton}>
+          <TouchableOpacity onPress={handleBack} style={styles.backButton}>
             <Text style={[styles.backButtonText, { color: colors.text }]}>←</Text>
           </TouchableOpacity>
           <Text style={[styles.headerTitle, { color: colors.text }]}>
@@ -225,6 +268,7 @@ export default function ProgramsScreen({ onBack, onUseProgram }: ProgramsScreenP
                 <ScrollView style={styles.templatesList} nestedScrollEnabled>
                   {availableTemplates.map((template) => {
                     const isSelected = selectedTemplateIds.includes(template.id);
+                    const selectionOrder = isSelected ? selectedTemplateIds.indexOf(template.id) + 1 : null;
                     return (
                       <TouchableOpacity
                         key={template.id}
@@ -247,8 +291,10 @@ export default function ProgramsScreen({ onBack, onUseProgram }: ProgramsScreenP
                         >
                           {template.name}
                         </Text>
-                        {isSelected && (
-                          <Text style={styles.checkmark}>✓</Text>
+                        {isSelected && selectionOrder !== null && (
+                          <View style={styles.selectionBadge}>
+                            <Text style={styles.selectionBadgeText}>{selectionOrder}</Text>
+                          </View>
                         )}
                       </TouchableOpacity>
                     );
@@ -281,7 +327,7 @@ export default function ProgramsScreen({ onBack, onUseProgram }: ProgramsScreenP
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
+        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
           <Text style={[styles.backButtonText, { color: colors.text }]}>←</Text>
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.text }]}>
@@ -291,6 +337,15 @@ export default function ProgramsScreen({ onBack, onUseProgram }: ProgramsScreenP
           <Text style={[styles.addButtonText, { color: colors.primary }]}>+</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Zorunlu mod bilgilendirmesi */}
+      {isRequiredMode && (
+        <View style={[styles.requiredModeBanner, { backgroundColor: colors.primary + '20', borderColor: colors.primary }]}>
+          <Text style={[styles.requiredModeText, { color: colors.text }]}>
+            {t('premiumOnboardingProgramRequired')} ({programs.length}/{minRequiredCount})
+          </Text>
+        </View>
+      )}
 
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
         {isLoading ? (
@@ -448,7 +503,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 12,
+    height: 52,
     paddingHorizontal: 16,
     borderRadius: 8,
     borderWidth: 1,
@@ -459,10 +514,20 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     flex: 1,
   },
-  checkmark: {
-    fontSize: 18,
+  selectionBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
+    flexShrink: 0,
+  },
+  selectionBadgeText: {
+    fontSize: 14,
+    fontWeight: '700',
     color: 'white',
-    fontWeight: 'bold',
   },
   emptyTemplates: {
     padding: 16,
@@ -529,6 +594,17 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 14,
     fontWeight: '600',
+  },
+  requiredModeBanner: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    alignItems: 'center',
+  },
+  requiredModeText: {
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
   },
   programCard: {
     borderRadius: 12,

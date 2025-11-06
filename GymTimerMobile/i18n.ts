@@ -37,6 +37,7 @@ const resources = {
       reset: 'Sıfırla',
       save: 'Kaydet',
       cancel: 'İptal',
+      ok: 'Tamam',
       finishSet: 'Seti Bitir',
       finishRest: 'Dinlenmeyi Bitir',
       speak_work: 'Çalışma Zamanı',
@@ -76,6 +77,19 @@ const resources = {
       premiumFeature6: 'Gelişmiş Ses Ayarları',
       premiumThemes: 'Premium Temalar',
       themes: 'Temalar',
+      // Premium Onboarding
+      premiumOnboardingTitle: 'Premium Özelliklerine Hoş Geldiniz! 🎉',
+      premiumOnboardingMessage: 'Premium özelliklerini verimli kullanabilmeniz için sizi kısa bir tanıtım akışına yönlendireceğiz. Bu akışta şablon ve program oluşturmayı öğreneceksiniz.',
+      premiumOnboardingStart: 'Başla',
+      premiumOnboardingTemplateRequired: 'En az 2 şablon oluşturmanız gerekiyor',
+      premiumOnboardingProgramRequired: 'En az 1 program oluşturmanız gerekiyor',
+      premiumOnboardingCannotExit: 'Bu akışı tamamlamadan çıkamazsınız',
+      premiumOnboardingTemplatesCompleteTitle: 'Harika! Şablonlarınız Hazır 🎯',
+      premiumOnboardingTemplatesCompleteMessage: 'Şimdi oluşturduğunuz şablonlardan bir antrenman programı oluşturalım. Bu sayede birden fazla antrenmanı birleştirerek daha kapsamlı programlar yapabilirsiniz.',
+      premiumOnboardingTemplatesCompleteButton: 'Devam Et',
+      premiumOnboardingProgramsCompleteTitle: 'Tebrikler! Premium Hazırsınız! 🎉',
+      premiumOnboardingProgramsCompleteMessage: 'Şimdi premium ayrıcalıklarını keyifle kullanabilirsiniz. Şablonlarınızı ve programlarınızı kullanarak antrenmanlarınızı başlatabilir, istatistiklerinizi takip edebilir ve daha fazlasını keşfedebilirsiniz.',
+      premiumOnboardingProgramsCompleteButton: 'Ana Sayfaya Git',
       // Antrenman Şablonları
       templates: 'Şablonlar',
       templatesTitle: 'Antrenman Şablonları',
@@ -239,10 +253,6 @@ const resources = {
           question: 'Ses efektlerini nasıl özelleştiririm?',
           answer: 'Premium menüden "Ses Ayarları" seçeneğine giderek çalışma, dinlenme ve antrenman sonu seslerini açıp kapatabilirsiniz.',
         },
-        faq10: {
-          question: 'Temalar nasıl değiştirilir?',
-          answer: 'Premium menüden "Temalar" seçeneğine giderek mevcut temalar arasından seçim yapabilirsiniz. Tema değişikliği anında uygulanır.',
-        },
         faq11: {
           question: 'Ücretsiz versiyonun limitleri nelerdir?',
           answer: 'Ücretsiz versiyonda maksimum 5 set ve 300 saniye (5 dakika) süre limiti vardır. Premium\'a yükselterek bu limitleri kaldırabilirsiniz.',
@@ -269,19 +279,7 @@ const resources = {
         },
         faq17: {
           question: 'Uygulamayı kapatırsam timer durur mu?',
-          answer: 'Hayır, uygulama kapatıldığında timer durur. Ancak antrenman kayıtları belirli koşullarda kaydedilir.',
-        },
-        faq18: {
-          question: 'Dil değiştirme nasıl yapılır?',
-          answer: 'Ana ekranda sağ üst köşedeki dil butonuna (TR/EN) tıklayarak dil değiştirebilirsiniz.',
-        },
-        faq19: {
-          question: 'Karanlık mod nasıl açılır?',
-          answer: 'Ana ekranda sağ üst köşedeki tema butonuna (☀️/🌙) tıklayarak karanlık ve aydınlık mod arasında geçiş yapabilirsiniz.',
-        },
-        faq20: {
-          question: 'Premium özellikleri nasıl geri yüklerim?',
-          answer: 'Premium menüden veya satın alma sayfasından "Satın Alımları Geri Yükle" butonuna tıklayarak daha önce satın aldığınız Premium özelliklerini geri yükleyebilirsiniz.',
+          answer: 'Evet, uygulama kapatıldığında timer durur. Ancak antrenman kayıtları belirli koşullarda kaydedilir.',
         },
         contact: {
           title: 'İletişim',
@@ -521,10 +519,6 @@ const resources = {
           question: 'How to customize sound effects?',
           answer: 'Go to "Sound Settings" from the Premium menu to enable or disable work, rest, and workout end sounds.',
         },
-        faq10: {
-          question: 'How to change themes?',
-          answer: 'Go to "Themes" from the Premium menu and choose from available themes. Theme changes are applied immediately.',
-        },
         faq11: {
           question: 'What are the limits of the free version?',
           answer: 'The free version has a maximum of 5 sets and 300 seconds (5 minutes) duration limit. You can remove these limits by upgrading to Premium.',
@@ -552,18 +546,6 @@ const resources = {
         faq17: {
           question: 'Does the timer stop if I close the app?',
           answer: 'Yes, when the app is closed, the timer stops. However, workout records are saved under certain conditions.',
-        },
-        faq18: {
-          question: 'How to change language?',
-          answer: 'Click the language button (TR/EN) in the top right corner of the home screen to change the language.',
-        },
-        faq19: {
-          question: 'How to enable dark mode?',
-          answer: 'Click the theme button (☀️/🌙) in the top right corner of the home screen to switch between dark and light modes.',
-        },
-        faq20: {
-          question: 'How to restore Premium features?',
-          answer: 'Click "Restore Purchases" from the Premium menu or purchase page to restore your previously purchased Premium features.',
         },
         contact: {
           title: 'Contact',

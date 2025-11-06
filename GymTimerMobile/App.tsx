@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { View, ActivityIndicator, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { View, ActivityIndicator, StyleSheet, Text, TouchableOpacity, Animated } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Toast from 'react-native-toast-message';
 import './i18n';
+import { useTranslation } from 'react-i18next';
 import HomeScreen from './screens/HomeScreen';
 import TimerScreen from './screens/TimerScreen';
 import PurchaseScreen from './screens/PurchaseScreen';
@@ -20,8 +21,13 @@ import { DEFAULT_VALUES, STORAGE_KEYS } from './utils/constants';
 import { usePersistedState } from './hooks/usePersistedState';
 import { usePremium } from './hooks/usePremium'; // usePremium import eklendi
 import PremiumDrawer from './components/PremiumDrawer';
+import PremiumOnboardingModal from './components/PremiumOnboardingModal';
+import OnboardingTransitionModal from './components/OnboardingTransitionModal';
+import { PREMIUM } from './utils/constants';
 
 function AppContent() {
+  const { t } = useTranslation();
+  
   // Persisted states
   const [setCount, setSetCount] = usePersistedState<string>({
     key: STORAGE_KEYS.SET_COUNT,
@@ -45,6 +51,57 @@ function AppContent() {
   const [templateSequence, setTemplateSequence] = useState<Array<{ setCount: number; setDuration: number; restDuration: number }> | undefined>(undefined);
   const { premiumTheme, setPremiumTheme } = useTheme();
   const { isPremium } = usePremium(); // Premium durumunu al
+  
+  // Premium onboarding state
+  const [showPremiumOnboardingModal, setShowPremiumOnboardingModal] = useState(false);
+  const [isPremiumOnboardingCompleted, setIsPremiumOnboardingCompleted] = useState(false);
+  const [premiumOnboardingStep, setPremiumOnboardingStep] = useState<'templates' | 'programs' | null>(null);
+  const [showTemplatesCompleteModal, setShowTemplatesCompleteModal] = useState(false);
+  const [showProgramsCompleteModal, setShowProgramsCompleteModal] = useState(false);
+  
+  // Premium onboarding kontrolü
+  useEffect(() => {
+    const checkPremiumOnboarding = async () => {
+      if (!isPremium) {
+        return; // Premium değilse kontrol etme
+      }
+      
+      try {
+        const completed = await AsyncStorage.getItem(PREMIUM.ONBOARDING_COMPLETED_KEY);
+        if (completed === 'true') {
+          setIsPremiumOnboardingCompleted(true);
+        } else {
+          // Premium onboarding tamamlanmamış, modal'ı göster
+          setShowPremiumOnboardingModal(true);
+        }
+      } catch (error) {
+        console.error('Error checking premium onboarding:', error);
+        // Hata durumunda modal'ı göster
+        setShowPremiumOnboardingModal(true);
+      }
+    };
+    
+    checkPremiumOnboarding();
+  }, [isPremium]);
+  
+  // Premium satın alındığında onboarding kontrolü
+  useEffect(() => {
+    if (isPremium && !isPremiumOnboardingCompleted) {
+      // Premium oldu, onboarding kontrolü yap
+      const checkOnboarding = async () => {
+        try {
+          const completed = await AsyncStorage.getItem(PREMIUM.ONBOARDING_COMPLETED_KEY);
+          if (completed !== 'true') {
+            setShowPremiumOnboardingModal(true);
+          }
+        } catch (error) {
+          console.error('Error checking premium onboarding:', error);
+          setShowPremiumOnboardingModal(true);
+        }
+      };
+      checkOnboarding();
+    }
+  }, [isPremium, isPremiumOnboardingCompleted]);
   
   // Onboarding kontrolü - sadece ilk seferde göster
   useEffect(() => {
@@ -116,7 +173,51 @@ function AppContent() {
   };
 
   const handleCloseTemplates = () => {
-    setCurrentScreen('home');
+    // Zorunlu modda ise geri çıkmayı engelle (TemplatesScreen içinde kontrol ediliyor)
+    if (premiumOnboardingStep !== 'templates') {
+      setCurrentScreen('home');
+    }
+  };
+
+  // Premium onboarding handler'ları
+  const handlePremiumOnboardingStart = () => {
+    setShowPremiumOnboardingModal(false);
+    setPremiumOnboardingStep('templates');
+    setCurrentScreen('templates');
+  };
+
+  const handleTemplatesComplete = () => {
+    // Şablon ekranı tamamlandı, geçiş modal'ını göster
+    setShowTemplatesCompleteModal(true);
+  };
+
+  const handleTemplatesCompleteContinue = () => {
+    // Geçiş modal'ından devam edildi, program ekranına geç
+    setShowTemplatesCompleteModal(false);
+    setPremiumOnboardingStep('programs');
+    setCurrentScreen('programs');
+  };
+
+  const handleProgramsComplete = () => {
+    // Program ekranı tamamlandı, tamamlanma modal'ını göster
+    setShowProgramsCompleteModal(true);
+  };
+
+  const handleProgramsCompleteContinue = async () => {
+    // Tamamlanma modal'ından devam edildi, onboarding'i tamamla
+    setShowProgramsCompleteModal(false);
+    try {
+      await AsyncStorage.setItem(PREMIUM.ONBOARDING_COMPLETED_KEY, 'true');
+      setIsPremiumOnboardingCompleted(true);
+      setPremiumOnboardingStep(null);
+      setCurrentScreen('home');
+    } catch (error) {
+      console.error('Error saving premium onboarding:', error);
+      // Hata olsa bile akışı tamamla
+      setIsPremiumOnboardingCompleted(true);
+      setPremiumOnboardingStep(null);
+      setCurrentScreen('home');
+    }
   };
 
   const handleUseTemplate = (template: { setCount: number; setDuration: number; restDuration: number }) => {
@@ -209,9 +310,21 @@ function AppContent() {
             ) : currentScreen === 'soundSettings' ? (
               <SoundSettingsScreen onBack={handleCloseSoundSettings} />
             ) : currentScreen === 'templates' ? (
-              <TemplatesScreen onBack={handleCloseTemplates} onUseTemplate={handleUseTemplate} />
+              <TemplatesScreen 
+                onBack={handleCloseTemplates} 
+                onUseTemplate={handleUseTemplate}
+                isRequiredMode={premiumOnboardingStep === 'templates'}
+                onComplete={handleTemplatesComplete}
+                minRequiredCount={2}
+              />
             ) : currentScreen === 'programs' ? (
-              <ProgramsScreen onBack={handleClosePrograms} onUseProgram={handleUseProgram} />
+              <ProgramsScreen 
+                onBack={handleClosePrograms} 
+                onUseProgram={handleUseProgram}
+                isRequiredMode={premiumOnboardingStep === 'programs'}
+                onComplete={handleProgramsComplete}
+                minRequiredCount={1}
+              />
             ) : currentScreen === 'help' ? (
               <HelpCenterScreen onBack={handleCloseHelp} />
             ) : (
@@ -237,6 +350,24 @@ function AppContent() {
               onOpenTemplates={handleOpenTemplates}
               onOpenPrograms={handleOpenPrograms}
             />
+        <PremiumOnboardingModal
+          visible={showPremiumOnboardingModal}
+          onStart={handlePremiumOnboardingStart}
+        />
+        <OnboardingTransitionModal
+          visible={showTemplatesCompleteModal}
+          title={t('premiumOnboardingTemplatesCompleteTitle')}
+          message={t('premiumOnboardingTemplatesCompleteMessage')}
+          buttonText={t('premiumOnboardingTemplatesCompleteButton')}
+          onContinue={handleTemplatesCompleteContinue}
+        />
+        <OnboardingTransitionModal
+          visible={showProgramsCompleteModal}
+          title={t('premiumOnboardingProgramsCompleteTitle')}
+          message={t('premiumOnboardingProgramsCompleteMessage')}
+          buttonText={t('premiumOnboardingProgramsCompleteButton')}
+          onContinue={handleProgramsCompleteContinue}
+        />
         <ToastConfig />
       </SafeAreaProvider>
     </ErrorBoundary>

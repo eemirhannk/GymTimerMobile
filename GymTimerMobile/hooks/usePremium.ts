@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { AppState } from 'react-native';
-import * as InAppPurchases from 'expo-in-app-purchases';
+// @ts-ignore - Temporary mock for Android build compatibility
+import * as InAppPurchases from '../utils/mock-in-app-purchases';
 import { usePersistedState } from './usePersistedState';
 import { PREMIUM } from '../utils/constants';
 import { showErrorToast } from '../utils/toast';
@@ -16,7 +17,7 @@ type PremiumStatus = {
 
 export const usePremium = () => {
   // Development için premium test modu (test için true yapın)
-  const TEST_PREMIUM = true; // Test için true yapın
+  const TEST_PREMIUM = false; // Test için false yapın (free versiyon testi için)
   
   const [isPremiumStored, setIsPremiumStored] = usePersistedState<boolean>({
     key: PREMIUM.STORAGE_KEY,
